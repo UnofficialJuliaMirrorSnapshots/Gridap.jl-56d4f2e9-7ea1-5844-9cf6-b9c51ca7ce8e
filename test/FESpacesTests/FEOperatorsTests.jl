@@ -87,5 +87,11 @@ r2 = similar(r)
 apply!(r2,op,zh)
 @test r ≈ r2
 
+cache = solve!(zh,solver,op)
+@test free_dofs(zh) ≈ free_dofs(uh)
+
+zh = zero(U)
+solve!(zh,solver,op,cache)
+@test free_dofs(zh) ≈ free_dofs(uh)
 
 end

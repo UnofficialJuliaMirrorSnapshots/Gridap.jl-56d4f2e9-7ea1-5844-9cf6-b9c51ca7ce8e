@@ -9,6 +9,7 @@ using Gridap.CellIntegration
 
 using Gridap.FESpaces
 using Gridap.Assemblers
+using Gridap.NonLinearSolvers
 using Gridap.LinearSolvers
 using LinearAlgebra
 
@@ -20,10 +21,13 @@ export NonLinearFEOperator
 export NonLinearFESolver
 import Gridap: solve
 import Gridap: solve!
-export jacobian
-export jacobian!
+import Gridap: jacobian
+import Gridap: jacobian!
 import Gridap: apply
 import Gridap: apply!
+import Gridap: residual
+import Gridap: residual!
+import Gridap.NonLinearSolvers: create_in_domain
 import Gridap.FESpaces: TrialFESpace
 import Gridap.FESpaces: TestFESpace
 import Gridap.LinearSolvers: LinearSolver
@@ -56,38 +60,12 @@ end
 
 abstract type FESolver end
 
-LinearSolver(::FESolver)::LinearSolver = @abstractmethod
-
-"""
-Solve with a given initial guess that will be overwritten with the solution.
-The initial Jacobian, initial residual, and the initial numerical setup are also given.
-This routine is useful is useful for time-dependent problems, where the initial
-data has been already set in another place for all time steps.
-"""
-function solve!(
-  uh::FEFunction,A::AbstractMatrix,b::AbstractVector,dx::AbstractVector,
-  ::NumericalSetup,::FESolver,::FEOperator)
+function solve!(uh::FEFunction,::FESolver,::FEOperator)::Any
   @abstractmethod
 end
 
-"""
-Solve with given initial guess, which is overwritten by the solution.
-In contrast to previous one, this method does the set up of the first linear solve.
-This routine is useful is for steady-state problems.
-"""
-function solve!(uh::FEFunction,nls::FESolver,op::FEOperator)
-
-  # Setup system for first solve
-  b = apply(op, uh)
-  A = jacobian(op, uh)
-  dx = similar(b)
-  ls = LinearSolver(nls)
-  ss = symbolic_setup(ls, A)
-  ns = numerical_setup(ss,A)
-
-  # Do the iterations
-  solve!(uh,A,b,dx,ns,nls,op)
-
+function solve!(uh::FEFunction,::FESolver,::FEOperator,::Any)
+  @abstractmethod
 end
 
 """
@@ -95,14 +73,44 @@ Solve that allocates, and sets initial guess to zero
 and returns the solution
 """
 function solve(nls::FESolver,op::FEOperator)
-
-  # Setup initial condition
   U = TrialFESpace(op)
   uh = zero(U)
-
-  # Solve
   solve!(uh,nls,op)
   uh
+end
+
+"""
+Struct representing the non-linear algebraic problem
+associated with a FEOperator
+"""
+struct NonLinearOpFromFEOp <: NonLinearOperator
+  feop::FEOperator
+end
+
+function residual!(b::AbstractVector,op::NonLinearOpFromFEOp,x::AbstractVector)
+  U = TrialFESpace(op.feop)
+  uh = FEFunction(U,x)
+  apply!(b,op.feop,uh)
+end
+
+function jacobian!(A::AbstractMatrix,op::NonLinearOpFromFEOp,x::AbstractVector)
+  U = TrialFESpace(op.feop)
+  uh = FEFunction(U,x)
+  jacobian!(A,op.feop,uh)
+end
+
+function jacobian(op::NonLinearOpFromFEOp,x::AbstractVector)
+  U = TrialFESpace(op.feop)
+  uh = FEFunction(U,x)
+  jacobian(op.feop,uh)
+end
+
+function create_in_domain(op::NonLinearOpFromFEOp)
+  U = TrialFESpace(op.feop)
+  T = value_type(U)
+  E = eltype(T)
+  n = length(free_dofs(U))
+  x = zeros(E,n)
 end
 
 """
@@ -172,22 +180,29 @@ struct LinearFESolver <: FESolver
   ls::LinearSolver
 end
 
-LinearSolver(s::LinearFESolver) = s.ls
-
-function solve!(
-  ::FEFunction,::AbstractMatrix,::AbstractVector,
-  ::NumericalSetup,::LinearFESolver,::FEOperator)
+function solve!(::FEFunction,::LinearFESolver,::FEOperator)
   @unreachable
 end
 
-function solve!(
-  uh::FEFunction,A::AbstractMatrix,b::AbstractVector,dx::AbstractVector,ns::NumericalSetup,
-  s::LinearFESolver,o::LinearFEOperator)
+function solve!(::FEFunction,::LinearFESolver,::FEOperator,::Any)
+  @unreachable
+end
 
+function solve!(uh::FEFunction,s::LinearFESolver,o::LinearFEOperator)
   x = free_dofs(uh)
-  broadcast!(*,b,b,-1)
-  solve!(dx,ns,A,b)
-  broadcast!(+,x,x,dx)
+  A = o.mat
+  b = o.vec
+  ss = symbolic_setup(s.ls,A)
+  ns = numerical_setup(ss,A)
+  solve!(x,ns,A,b)
+  ns
+end
+
+function solve!(uh::FEFunction,s::LinearFESolver,o::LinearFEOperator,ns::NumericalSetup)
+  x = free_dofs(uh)
+  A = o.mat
+  b = o.vec
+  solve!(x,ns,A,b)
 end
 
 """
@@ -238,67 +253,24 @@ function _cellmat(op,uh)
   integrate(op.jac(uh,v,du), op.trian, op.quad)
 end
 
+
+"""
+A general NonLinearFESolver
+"""
 struct NonLinearFESolver <: FESolver
-  ls::LinearSolver
-  tol::Float64
-  max_nliters::Int
+  nls::NonLinearSolver
 end
 
-LinearSolver(s::NonLinearFESolver) = s.ls
-
-function solve!(
-  uh::FEFunction,A::AbstractMatrix,b::AbstractVector,dx::AbstractVector,ns::NumericalSetup,
-  nls::NonLinearFESolver,op::FEOperator)
-
-  # Get raw solution
+function solve!(uh::FEFunction,nls::NonLinearFESolver,op::FEOperator)
+  nlop = NonLinearOpFromFEOp(op)
   x = free_dofs(uh)
-
-  # Check for convergence on the initial residual
-  isconv, conv0 = _check_convergence(nls, b)
-  if isconv; return; end
-
-  # Newton-like iterations
-  for nliter in 1:nls.max_nliters
-
-    # Solve linearized problem
-    broadcast!(*,b,b,-1)
-    solve!(dx,ns,A,b)
-    broadcast!(+,x,x,dx)
-
-    # Check convergence for the current residual
-    apply!(b, op, uh)
-    isconv = _check_convergence(nls, b, conv0)
-    if isconv; return; end
-
-    if nliter == nls.max_nliters
-      @unreachable
-    end
-
-    # Assemble jacobian (fast in-place version)
-    # and prepare solver
-    jacobian!(A, op, uh)
-    numerical_setup!(ns,A)
-
-  end
-
+  solve!(x,nls.nls,nlop)
 end
 
-function _check_convergence(nls::NonLinearFESolver,b)
-  m0 = _inf_norm(b)
-  (false, m0)
-end
-
-function _check_convergence(nls::NonLinearFESolver,b,m0)
-  m = _inf_norm(b)
-  m < nls.tol * m0
-end
-
-function _inf_norm(b)
-  m = 0
-  for bi in b
-    m = max(m,abs(bi))
-  end
-  m
+function solve!(uh::FEFunction,nls::NonLinearFESolver,op::FEOperator,cache::Any)
+  nlop = NonLinearOpFromFEOp(op)
+  x = free_dofs(uh)
+  solve!(x,nls.nls,nlop,cache)
 end
 
 end # module FEOperators
