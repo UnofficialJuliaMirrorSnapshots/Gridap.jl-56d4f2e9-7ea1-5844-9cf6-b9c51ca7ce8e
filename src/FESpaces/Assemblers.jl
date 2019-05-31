@@ -72,7 +72,8 @@ end
 
 function assemble!(
   vec::Vector{E},this::SparseMatrixAssembler{E}, vals::CellVector) where E
-  _vals, _rows = apply_constraints(this.testfesp, vals)
+  _vals = apply_constraints(this.testfesp, vals)
+  _rows = celldofids(this.testfesp)
   vec .= zero(E)
   _assemble_vector!(vec, _vals, _rows)
 end
@@ -88,8 +89,10 @@ function _assemble_vector!(vec,vals,rows)
 end
 
 function assemble(this::SparseMatrixAssembler{E}, vals::CellMatrix) where E
-  _vals, rows_m = apply_constraints_rows(this.testfesp, vals)
-  _vals, cols_m = apply_constraints_cols(this.trialfesp, _vals)
+  _vals = apply_constraints_rows(this.testfesp, vals)
+  rows_m = celldofids(this.testfesp)
+  _vals = apply_constraints_cols(this.trialfesp, _vals)
+  cols_m = celldofids(this.trialfesp)
   args = _assemble_sparse_matrix_values(_vals,rows_m,cols_m,Int,E)
   sparse(args...)
 end
@@ -119,5 +122,34 @@ function assemble!(
   m = assemble(this,vals)
   mat.nzval .= m.nzval
 end
+
+# Draft of multi field assembler
+#function _assemble_sparse_matrix_values(mf_vals,mf_rows,mf_cols,I,E)
+#  aux_row = I[]; aux_col = I[]; aux_val = E[]
+#  for (mf_rows_c, mf_cols_c, mf_vals_c) in zip(mf_rows,mf_cols,mf_vals)
+#    for (vals_c, (ifield, jfield)) in eachblock(mf_vals_c)
+#      rows_c = mf_rows_c[ifield]
+#      cols_c = mf_cols_c[jfield]
+#      row_offset = row_offsets[ifield]
+#      col_offset = col_offsets[jfield]
+#      _asseble_cell_values!(aux_row,aux_col,aux_val,rows_c,cols_c,vals_c,col_offset,row_offset)
+#    end
+#  end
+#  (aux_row, aux_col, aux_val)
+#end
+#
+#function _asseble_cell_values!(aux_row,aux_col,aux_val,rows_c,cols_c,vals_c,col_offset,row_offset)
+# for (j,gidcol) in enumerate(cols_c)
+#   if gidcol > 0
+#     for (i,gidrow) in enumerate(rows_c)
+#       if gidrow > 0
+#         push!(aux_row, gidrow+row_offset)
+#         push!(aux_col, gidcol+col_offset)
+#         push!(aux_val, vals_c[i,j])
+#       end
+#     end
+#   end
+# end
+#end
 
 end # module Assemblers

@@ -30,6 +30,8 @@ include("FESpaces/FESpaces.jl")
 include("FESpaces/Assemblers.jl")
 include("FESpaces/FEOperators.jl")
 
+include("MultiField/MultiCellArrays.jl")
+
 include("Vtkio.jl")
 
 end #module Gridap
