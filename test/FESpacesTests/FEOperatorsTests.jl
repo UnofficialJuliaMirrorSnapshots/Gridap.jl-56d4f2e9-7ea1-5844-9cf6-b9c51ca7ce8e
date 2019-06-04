@@ -1,5 +1,6 @@
 module FEOperatorsTests
 
+##
 using Gridap.FESpaces
 using Gridap.Assemblers
 using Gridap.FEOperators
@@ -16,6 +17,7 @@ using Gridap.CellIntegration
 using Gridap.Vtkio
 
 import Gridap: gradient
+##
 
 # Define manufactured functions
 ufun(x) = x[1] + x[2]
@@ -43,8 +45,8 @@ quad = CellQuadrature(trian,order=2)
 bfield = CellField(trian,bfun)
 
 # Define forms
-a(v,u) = varinner(∇(v), ∇(u))
-b(v) = varinner(v,bfield)
+a(v,u) = inner(∇(v), ∇(u))
+b(v) = inner(v,bfield)
 
 # Define Assembler
 assem = SparseMatrixAssembler(V,U)
@@ -64,7 +66,7 @@ u = CellField(trian,ufun)
 e = u - uh
 
 # Define norms to measure the error
-l2(u) = varinner(u,u)
+l2(u) = inner(u,u)
 h1(u) = a(u,u) + l2(u)
 
 # Compute errors

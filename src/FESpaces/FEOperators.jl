@@ -34,10 +34,12 @@ import Gridap.LinearSolvers: LinearSolver
 
 abstract type FEOperator end
 
+# @santiagobadia : Public method
 function apply(::FEOperator,::FEFunction)::AbstractVector
   @abstractmethod
 end
 
+# @santiagobadia : Not sure it has to be public
 function jacobian(::FEOperator,::FEFunction)::AbstractMatrix
   @abstractmethod
 end
@@ -140,11 +142,9 @@ function LinearFEOperator(
   trian::Triangulation{Z},
   quad::CellQuadrature{Z}) where {M,V,D,Z,T}
 
-  # This will not be a CellBasis in the future
-  v = CellBasis(testfesp)
-  u = CellBasis(trialfesp)
+  v = FEBasis(testfesp)
+  u = FEBasis(trialfesp)
 
-  # The way we modify the rhs can be improved
   uhd = zero(trialfesp)
 
   cellmat = integrate(biform(v,u),trian,quad)
@@ -211,7 +211,7 @@ function solve!(uh::FEFunction,s::LinearFESolver,o::LinearFEOperator,ns::Numeric
 end
 
 """
-Struct representing a non-linear FE Operator
+Struct representing a nonlinear FE Operator
 """
 struct NonLinearFEOperator{D,Z,T} <:FEOperator
   res::Function
@@ -248,13 +248,13 @@ function jacobian!(mat::AbstractMatrix,op::NonLinearFEOperator,uh::FEFunction)
 end
 
 function _cellvec(op,uh)
-  v = CellBasis(op.testfesp)
+  v = FEBasis(op.testfesp)
   integrate(op.res(uh,v), op.trian, op.quad)
 end
 
 function _cellmat(op,uh)
-  v = CellBasis(op.testfesp)
-  du = CellBasis(op.trialfesp)
+  v = FEBasis(op.testfesp)
+  du = FEBasis(op.trialfesp)
   integrate(op.jac(uh,v,du), op.trian, op.quad)
 end
 
