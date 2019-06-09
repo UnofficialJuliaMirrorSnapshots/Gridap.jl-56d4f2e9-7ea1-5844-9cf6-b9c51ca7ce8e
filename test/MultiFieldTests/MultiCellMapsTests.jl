@@ -1,5 +1,3 @@
-include("../../src/MultiField/MultiCellMaps.jl")
-
 module MultiCellMapsTests
 
 using Test
@@ -11,8 +9,8 @@ using Gridap.Geometry.Cartesian
 using Gridap.FESpaces
 using Gridap.CellIntegration
 using Gridap.CellQuadratures
-using ..MultiCellArrays
-using ..MultiCellMaps
+using Gridap.MultiCellArrays
+using Gridap.MultiCellMaps
 import Gridap: gradient
 
 u1fun(x) = x[1] + x[2]
