@@ -1,19 +1,26 @@
 module MultiFEBases
 
 using Gridap
-using Gridap.CellMaps
-using Gridap.MultiFESpaces
-using Gridap.MultiCellMaps
 
 import Gridap: gradient
 import Gridap: inner
 import Base: +, -, *
 import Base: length, getindex
 import Gridap.FESpaces: FEBasis
+import Gridap: CellBasis
 
 struct FEBasisWithFieldId{B<:CellBasis}
   cellbasis::B
   fieldid::Int
+end
+
+function CellBasis(
+  trian::Triangulation{D,Z},
+  fun::Function,
+  b::FEBasisWithFieldId,
+  u::Vararg{<:CellField{Z}}) where {D,Z}
+  basis = CellBasis(trian,fun,b.cellbasis,u...)
+  FEBasisWithFieldId(basis,b.fieldid)
 end
 
 for op in (:+, :-, :(gradient))
