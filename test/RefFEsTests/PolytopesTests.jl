@@ -2,7 +2,65 @@ module PolytopesTests
 
 ##
 using Gridap, Test
-using Gridap.Polytopes: PointInt
+# using Gridap.Polytopes
+p = Polytope(HEX_AXIS,HEX_AXIS)
+dim = 3
+for dim = 1:4
+  p = Polytope(ones(Int,dim)...)
+  _order = ones(Int,dim)
+  for i in 1:5
+    order = Tuple(_order*i)
+    nf = p.nfaces[end]
+    vs = Gridap.Polytopes.generate_interior_nodes(nf,order)
+    @test length(vs) == max(0,(i-1)^dim)
+  end
+end
+##
+a = zeros(Int,4,4)
+a[1,2] = 1
+a[1,3] = 2
+a[1,4] = 3
+a[2,3] = 1
+a[2,4] = 3
+a[3,4] = 1
+##
+for dim = 1:4
+  p = Polytope(2*ones(Int,dim)...)
+  _order = ones(Int,dim)
+  for i in 1:4
+    order = Tuple(_order*i)
+    nf = p.nfaces[end]
+    vs = Gridap.Polytopes.generate_interior_nodes(nf,order)
+    @test length(vs) == a[dim,i]
+  end
+end
+##
+dim = 2
+p = Polytope(2*ones(Int,dim)...)
+_order = ones(Int,dim)
+i = 3
+order = Tuple(_order*i)
+nf = p.nfaces[end]
+vs = Gridap.Polytopes.generate_interior_nodes(nf,order)
+@test length(vs) == a[dim,i]
+# @show vs
+##
+p = Polytope(HEX_AXIS, HEX_AXIS, TET_AXIS)
+_order = ones(Int,3)
+order = Tuple(_order*3)
+nf = p.nfaces[end]
+vs = Gridap.Polytopes.generate_interior_nodes(nf,order)
+@test length(vs) == 1
+##
+pl = Polytope(HEX_AXIS, TET_AXIS, HEX_AXIS)
+_order = ones(Int,3)
+order = Tuple(_order*3)
+p = pl.nfaces[end]
+vs = Gridap.Polytopes.generate_interior_nodes(p,order)
+length(vs)
+@test length(vs) == 2
+##
+
 
 # Developing the change of basis for all n-faces of a polytope
 # 1. Given an n-face, determine all rigid-body permutations
@@ -24,21 +82,25 @@ using Gridap.Polytopes: PointInt
 ##
 D=3
 # Cube
-polytope = Polytope(1,1,1)
+extrusion = (1,1,1)
+polytope = Polytope(extrusion)
+polytope.extrusion.array.data
+x = Vector{Float64}(undef,D)
+x .= polytope.nfaces[1].anchor.array
 @test length(polytope.nfaces) == 27
 @test num_nfaces(polytope,0) == 8
 @test num_nfaces(polytope,1) == 12
 @test num_nfaces(polytope,2) == 6
 @test num_nfaces(polytope,3) == 1
 # Pyramid
-extrusion = PointInt{D}(1,1,2)
+extrusion = (1,1,2)
 polytope = Polytope(extrusion)
 @test length(polytope.nfaces) == 19
 # Prysm
-extrusion = PointInt{D}(1,2,1)
+extrusion = (1,2,1)
 polytope = Polytope(extrusion)
 @test length(polytope.nfaces) == 21
-extrusion = PointInt{D}(1,2,2)
+extrusion = Point(1,2,2)
 polytope = Polytope(extrusion)
 @test length(polytope.nfaces) == 15
 ##
@@ -47,7 +109,7 @@ polytope = Polytope(extrusion)
 ##
 D=3
 orders=[2,3,2]
-extrusion = PointInt{D}(1,1,1)
+extrusion = Point(1,1,1)
 polytope = Polytope(extrusion)
 nodes = NodesArray(polytope,orders)
 @test length(nodes.closurenfacenodes[end-1])==12
@@ -58,7 +120,7 @@ nodes = NodesArray(polytope,orders)
 ##
 D=3
 orders=[2,3,2]
-extrusion = PointInt{D}(1,1,1)
+extrusion = Point(1,1,1)
 polytope = Polytope(extrusion)
 nodes = NodesArray(polytope,orders)
 @test length(nodes.nfacenodes[end-1])==2
@@ -69,7 +131,7 @@ nodes = NodesArray(polytope,orders)
 ##
 D=3
 orders=[2,3,4]
-extrusion = PointInt{D}(1,1,1)
+extrusion = Point(1,1,1)
 polytope = Polytope(extrusion)
 nodes = NodesArray(polytope,orders)
 @test length(nodes.coordinates)==60
@@ -86,14 +148,21 @@ p = Polytope(1,1,1)
 nf_vs = Gridap.Polytopes._dimfrom_fs_dimto_fs(p,2,0)
 @test length(nf_vs) == 6
 @test nf_vs[end] == [2,4,6,8]
-p = Polytope(1,2,2)
+p = Polytope(Point(1,2,2))
 nf_vs = Gridap.Polytopes._dimfrom_fs_dimto_fs(p,2,0)
 @test length(nf_vs) == 4
 @test nf_vs[end] == [2,3,4]
 
 # Edge
 ##
-
+p = Polytope(1,1,2)
+perm_p = Gridap.Polytopes.generate_admissible_permutations(p)
+@test length(perm_p) == 48
+# @show perm_p
+p = Polytope(1,2,2)
+perm_p = Gridap.Polytopes.generate_admissible_permutations(p)
+@test length(perm_p) == 24
+##
 
 #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%5
 # D = 3
@@ -174,7 +243,7 @@ nf_vs = Gridap.Polytopes._dimfrom_fs_dimto_fs(p,2,0)
 # Test to check the views of n-face set for a given n
 ##
 # D=3
-# extrusion = PointInt{D}(1,1,1)
+# extrusion = Point{D,Int}(1,1,1)
 # polytope = Polytope(extrusion)
 # for j=1:length(polytope.extrusion)+1
 #   for i=1:length(polytope.nfaces[polytope.dimnfs[j]])
