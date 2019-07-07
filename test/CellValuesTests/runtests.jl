@@ -38,6 +38,11 @@ include("MapsMocks.jl")
 
 @testset "ConstantCellValues" begin include("ConstantCellValuesTests.jl") end
 
+@testset "CompressedCellValues" begin include("CompressedCellValuesTests.jl") end
+
+@testset "NonIterableCellMaps" begin include("NonIterableCellMapsTests.jl") end
+
+@testset "IdentityCellNumbers" begin include("IdentityCellNumbersTests.jl") end
 
 end # module
 
