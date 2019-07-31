@@ -28,7 +28,9 @@ nodes = NodesArray(polytope,orders)
 dofsb = LagrangianDOFBasis{D,Float64}(nodes.coordinates)
 prebasis = MonomialBasis(Float64,orders)
 vals = evaluate(prebasis,dofsb.nodes)
-@test vals == [1.0 1.0 1.0; -1.0 0.0 1.0; 1.0 0.0 1.0]
+nodes
+vals
+@test vals == [1.0 1.0 1.0; 0.0 0.5 1.0; 0.0 0.25 1.0]
 ##
 
 ##
@@ -71,6 +73,7 @@ for i in 1:length(reffe.shfbasis)
 end
 dofv
 @test dofv == id
+
 ##
 ##
 # 1D reffe
@@ -79,7 +82,9 @@ orders=[2]
 extrusion = Point{D,Int}(1)
 polytope = Polytope(extrusion)
 reffe = LagrangianRefFE{D,VectorValue{D,Float64}}(polytope,orders)
-@test reffe.shfbasis.changeofbasis==[0.0  -0.5   0.5; 1.0   0.0  -1.0; 0.0   0.5   0.5]
+reffe.shfbasis.changeofbasis
+# @test reffe.shfbasis.changeofbasis==[0.0  -0.5   0.5; 1.0   0.0  -1.0; 0.0   0.5   0.5]
+@test reffe.shfbasis.changeofbasis==[1.0  -3.0   2.0; 0.0   4.0  -4.0; 0.0  -1.0   2.0]
 ##
 
 ##
@@ -111,7 +116,7 @@ reffe = LagrangianRefFE{D}{Float64}(polytope,orders)
 shfs = evaluate(reffe.shfbasis, quad.coords)
 elmatgp=[ shfs[:,igp]*shfs[:,igp]' for igp=1:prod(gps)]
 elmat = sum(quad.weights.*elmatgp)
-@test elmat≈[2/3 1/3; 1/3 2/3]
+@test elmat≈[1/3 1/6; 1/6 1/3]
 ##
 
 ##
@@ -126,7 +131,7 @@ reffe = LagrangianRefFE{D,Float64}(polytope,orders)
 shfs = evaluate(reffe.shfbasis, quad.coords)
 elmatgp=[ shfs[:,igp]*shfs[:,igp]' for igp=1:prod(gps)]
 elmat = sum(quad.weights.*elmatgp)
-@test elmat≈[4/9 2/9 2/9 1/9; 2/9 4/9 1/9 2/9; 2/9 1/9 4/9 2/9; 1/9 2/9 2/9 4/9]
+@test elmat≈0.25*[4/9 2/9 2/9 1/9; 2/9 4/9 1/9 2/9; 2/9 1/9 4/9 2/9; 1/9 2/9 2/9 4/9]
 ##
 
 ##
@@ -142,9 +147,9 @@ shfs = evaluate(reffe.shfbasis, quad.coords)
 numgps = length(quad.weights)
 elmatgp=[ shfs[:,igp]*shfs[:,igp]' for igp=1:numgps]
 elmat = sum(quad.weights.*elmatgp)
-@test sum(elmat)≈4
-@test elmat[1,1] ≈ 16/225
-@test elmat[1,2] ≈ 8/225
+@test sum(elmat)≈1
+@test elmat[1,1] ≈ 4/225
+@test elmat[1,2] ≈ 2/225
 ##
 
 ##
@@ -159,9 +164,9 @@ shfs = evaluate(reffe.shfbasis, quad.coords)
 numgps = length(quad.weights)
 elmatgp=[ shfs[:,igp]*shfs[:,igp]' for igp=1:prod(numgps)]
 elmat = sum(quad.weights.*elmatgp)
-@test sum(elmat)≈8
-@test elmat[1,1] ≈ 64/3375
-@test elmat[1,2] ≈ 32/3375
+@test sum(elmat)≈1
+@test elmat[1,1] ≈ 8/3375
+@test elmat[1,2] ≈ 4/3375
 ##
 
 ##
@@ -177,7 +182,7 @@ gradshfs = evaluate(gradb,quad.coords)
 numgps = length(quad.weights)
 elmatgp = [ view(gradshfs,:,igp)*view(gradshfs,:,igp)' for igp=1:numgps]
 elmat = sum(quad.weights.*elmatgp)
-@test elmat ≈ [1/2 -1/2; -1/2 1/2]
+@test elmat ≈ [1 -1; -1 1]
 ##
 
 ##
@@ -264,5 +269,28 @@ elmatscal = sum(quad.weights.*elmatgp)
 @test elmatvec[1:l,1:l] == elmatscal
 @test elmatvec[l+1:2l,l+1:2l] == elmatscal
 ##
+
+reffe = LagrangianRefFE{D,Float64}(polytope,orders)
+@test nfacedofs(reffe, 0) == [[1], [3], [7], [9]]
+@test nfacedofs(reffe, 1) == [[2], [8], [4], [6]]
+@test nfacedofs(reffe, 2) == [[5]]
+
+D=2
+orders=[2,2]
+extrusion = Point{D,Int}(1,1)
+polytope = Polytope(extrusion)
+reffe = LagrangianRefFE{D,VectorValue{D,Float64}}(polytope,orders)
+
+@test reffe.nfacenodes == [[1], [3], [7], [9], [2], [8], [4], [6], [5]]
+@test nfacedofs(reffe) == [[1, 10], [3, 12], [7, 16], [9, 18], [2, 11], [8, 17], [4, 13], [6, 15], [5, 14]]
+
+D=2
+orders=[1,1]
+extrusion = Point{D,Int}(1,1)
+polytope = Polytope(extrusion)
+reffe = LagrangianRefFE{D,VectorValue{D,Float64}}(polytope,orders)
+
+@test reffe.nfacenodes == [[1], [2], [3], [4], [], [], [], [], []] 
+@test nfacedofs(reffe) == [[1, 5], [2, 6], [3, 7], [4, 8], [], [], [], [], []] 
 
 end # module

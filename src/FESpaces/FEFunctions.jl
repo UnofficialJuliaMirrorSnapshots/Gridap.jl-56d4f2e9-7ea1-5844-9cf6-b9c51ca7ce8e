@@ -10,6 +10,7 @@ import Gridap: FESpace
 import Gridap: value_type
 
 import Gridap: evaluate, gradient, return_size
+import Gridap: symmetric_gradient
 import Gridap: reindex
 import Gridap: restrict
 import Base: size
@@ -81,6 +82,8 @@ evaluate(f::FEFunction{D,Z},q::CellPoints{Z}) where {D,Z} = evaluate(f.cellfield
 
 gradient(f::FEFunction) = gradient(f.cellfield)
 
+symmetric_gradient(f::FEFunction) = symmetric_gradient(f.cellfield)
+
 return_size(f::FEFunction,s::Tuple{Int}) = return_size(f.cellfield,s)
 
 getindex(f::FEFunction,i::Integer) = f.cellfield[i]
@@ -88,7 +91,7 @@ getindex(f::FEFunction,i::Integer) = f.cellfield[i]
 size(f::FEFunction) = (length(f.cellfield),)
 
 function interpolate(this::FESpace,fun::Function)
-  free_vals, diri_vals = interpolated_values(this,fun)
+  free_vals, diri_vals = interpolate_values(this,fun)
   FEFunction(this,free_vals,diri_vals)
 end
 # @santiagobadia : Using this, it always overwrites the FESpace Dirichlet

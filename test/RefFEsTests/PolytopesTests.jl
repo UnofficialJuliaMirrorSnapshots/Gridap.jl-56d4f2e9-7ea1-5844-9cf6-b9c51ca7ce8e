@@ -2,18 +2,63 @@ module PolytopesTests
 
 ##
 using Gridap, Test
+
+
+##
+# Adding outwards normals
+D = 3
+p = Polytope(1,1,1)
+ns, f_os = Gridap.Polytopes.facet_normals(p)
+@test ns[1].array ≈ [0, 0 ,-1]
+p = Polytope(1,2,2)
+ns, f_os = Gridap.Polytopes.facet_normals(p)
+@test ns[1].array ≈ [0, 0 ,-1]
+##
+# Adding outwards normals
+D = 2
+p = Polytope(1,1)
+ns, f_os = Gridap.Polytopes.facet_normals(p)
+@test ns[1].array ≈ [0,-1]
+p = Polytope(1,2)
+ns, f_os = Gridap.Polytopes.facet_normals(p)
+@test ns[1].array ≈ [0,-1]
+##
+# Adding outwards normals
+D = 4
+p = Polytope(1,1,1,1)
+ns, f_os = Gridap.Polytopes.facet_normals(p)
+@test ns[1].array ≈ [0,0,0,-1]
+p = Polytope(1,2,2,2)
+ns, f_os = Gridap.Polytopes.facet_normals(p)
+@test ns[1].array ≈ [0,0,0,-1]
+##
+D = 3
+p = Polytope(1,1,1)
+nf_vs = Gridap.Polytopes._dimfrom_fs_dimto_fs(p,2,0)
+vs = Gridap.Polytopes.vertices_coordinates(p)
+@test length(nf_vs) == 6
+@test nf_vs[end] == [2,4,6,8]
+p = Polytope(Point(1,2,2))
+nf_vs = Gridap.Polytopes._dimfrom_fs_dimto_fs(p,2,0)
+@test length(nf_vs) == 4
+@test nf_vs[end] == [2,3,4]
+##
+
+
+
 # using Gridap.Polytopes
 p = Polytope(HEX_AXIS,HEX_AXIS)
-dim = 3
 for dim = 1:4
   p = Polytope(ones(Int,dim)...)
   _order = ones(Int,dim)
   for i in 1:5
     order = Tuple(_order*i)
-    nf = p.nfaces[end]
-    vs = Gridap.Polytopes.generate_interior_nodes(nf,order)
+    # nf = p.nfaces[end]
+    vs = Gridap.Polytopes._interior_nodes_int_coords(p,order)
     @test length(vs) == max(0,(i-1)^dim)
   end
+  vcs = Gridap.Polytopes.vertices_coordinates(p)
+  @test length(vcs) == 2^dim
 end
 ##
 a = zeros(Int,4,4)
@@ -29,36 +74,32 @@ for dim = 1:4
   _order = ones(Int,dim)
   for i in 1:4
     order = Tuple(_order*i)
-    nf = p.nfaces[end]
-    vs = Gridap.Polytopes.generate_interior_nodes(nf,order)
+    # nf = p.nfaces[end]
+    vs = Gridap.Polytopes._interior_nodes_int_coords(p,order)
     @test length(vs) == a[dim,i]
   end
+  vcs = Gridap.Polytopes.vertices_coordinates(p)
+  @test length(vcs) == dim+1
 end
-##
-dim = 2
-p = Polytope(2*ones(Int,dim)...)
-_order = ones(Int,dim)
-i = 3
-order = Tuple(_order*i)
-nf = p.nfaces[end]
-vs = Gridap.Polytopes.generate_interior_nodes(nf,order)
-@test length(vs) == a[dim,i]
-# @show vs
 ##
 p = Polytope(HEX_AXIS, HEX_AXIS, TET_AXIS)
 _order = ones(Int,3)
 order = Tuple(_order*3)
-nf = p.nfaces[end]
-vs = Gridap.Polytopes.generate_interior_nodes(nf,order)
+# nf = p.nfaces[end]
+vs = Gridap.Polytopes._interior_nodes_int_coords(p,order)
 @test length(vs) == 1
+vcs = Gridap.Polytopes.vertices_coordinates(p)
+@test length(vcs) == 5
 ##
 pl = Polytope(HEX_AXIS, TET_AXIS, HEX_AXIS)
 _order = ones(Int,3)
 order = Tuple(_order*3)
-p = pl.nfaces[end]
-vs = Gridap.Polytopes.generate_interior_nodes(p,order)
+# p = pl.nfaces[end]
+vs = Gridap.Polytopes._interior_nodes_int_coords(pl,order)
 length(vs)
 @test length(vs) == 2
+vcs = Gridap.Polytopes.vertices_coordinates(pl)
+@test length(vcs) == 6
 ##
 
 
@@ -135,7 +176,7 @@ extrusion = Point(1,1,1)
 polytope = Polytope(extrusion)
 nodes = NodesArray(polytope,orders)
 @test length(nodes.coordinates)==60
-@test nodes.coordinates[33] ≈ Point(1.0, 1.0/3.0, 0.0)
+@test nodes.coordinates[33] ≈ Point(1.0, 2.0/3.0, 0.5)
 nfacenodes = nodes.closurenfacenodes[end-1]
 coords = nodes.coordinates[nfacenodes,:]
 fco = i -> coords[i][1]

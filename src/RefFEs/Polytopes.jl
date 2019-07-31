@@ -4,6 +4,7 @@ using Gridap
 using Gridap.Helpers
 using StaticArrays
 using Base.Cartesian
+using LinearAlgebra
 
 using Combinatorics
 
@@ -12,6 +13,7 @@ export NodesArray
 export NFace
 export HEX_AXIS, TET_AXIS
 export num_nfaces
+export facet_normals
 
 # Module constants
 
@@ -99,8 +101,9 @@ end
 
 """
 Creates an array of nodes `NodesArray` for a given polytope and the order per
-dimension
+dimension.
 """
+# @santiagobadia : TO BE REMOVED
 function NodesArray(polytope::Polytope, orders::Array{Int64,1})
   @notimplementedif any([ t != HEX_AXIS for t in polytope.extrusion.array])
   closurenfacenodes = [
@@ -156,6 +159,40 @@ function polytopenfaces(anchor::Point{D,Int}, extrusion::Point{D,Int}) where D
   end
   dimnfs[dnf+1]=numnfs:numnfs
   return [nf_nfs,dimnfs]
+end
+
+# Generates the reference polytopes for all n-faces (undef for vertices)
+function _nface_ref_polytopes(p::Polytope)
+  function _eliminate_zeros(a)
+    b = Int[]
+    for m in a
+      if (m !=0)
+        push!(b,m)
+      end
+    end
+    return Tuple(b)
+  end
+  nf_ref_p = Vector{Polytope}(undef,length(p.nfaces))
+  ref_nf_ps = Polytope[]
+  for (i_nf,nf) in enumerate(p.nfaces)
+    r_ext = _eliminate_zeros(nf.extrusion)
+    if r_ext != ()
+      k = 0
+      for (i_p,ref_p) in enumerate(ref_nf_ps)
+        if r_ext == ref_p.extrusion
+          k = i_p
+          nf_ref_p[i_nf] = ref_p
+        end
+      end
+      if k == 0
+        ref_p = Polytope(r_ext)
+        push!(ref_nf_ps,ref_p)
+        k = length(ref_nf_ps)+1
+        nf_ref_p[i_nf] = ref_p
+      end
+    end
+  end
+  return nf_ref_p
 end
 
 """
@@ -289,10 +326,17 @@ end
 
 """
 It generates the set of nodes (its coordinates) in the interior of an n-face,
-for a given order. The node coordinates are `Int` and from 0 to `order` per
-direction
+for a given order. The node coordinates are the ones for a equispace case.
 """
-function generate_interior_nodes(p::NFace{D}, order) where D
+function equidistant_interior_nodes_coordinates(p::Polytope{D}, order) where D
+  ns = _interior_nodes_int_coords(p, _order)
+  return ns_float = _interior_nodes_int_to_real_coords(ns,_order)
+end
+
+# It generates the set of nodes (its coordinates) in the interior of an n-face,
+# for a given order. The node coordinates are `Int` and from 0 to `order` per
+# direction
+function _interior_nodes_int_coords(p::Polytope{D}, order) where D
   ext = p.extrusion
   _ord = [order...]
   verts = Point{D,Int}[]
@@ -301,13 +345,9 @@ function generate_interior_nodes(p::NFace{D}, order) where D
   return verts
 end
 
-# Auxiliary private recursive function to implement generate_interior_nodes
+# Auxiliary private recursive function to implement _interior_nodes_int_coords
 function _generate_nodes!(dim, ext, order, coor, verts)
-  # println("***NEW EXTRUSION***")
   ncoo = copy(coor)
-  # @show dim
-  # @show ncoo
-  # @show order
   nord = copy(order)
   for i in 1:order[dim]-1
     ncoo[dim] = i
@@ -315,26 +355,105 @@ function _generate_nodes!(dim, ext, order, coor, verts)
       if (ext[dim] == TET_AXIS ) nord.-= 1 end
       _generate_nodes!(dim-1, ext, nord, ncoo, verts)
     else
-      # println("***PRINT***")
-      # @show dim
-      # @show ncoo
       push!(verts,Point(ncoo...))
     end
   end
 end
-# function _generate_nodes!(dim, ext, order, coor, verts)
-#   ncoo = coor
-#   for i in 1:order[dim]-1
-#     ncoo[dim] = i
-#     if dim > 1
-#       nord = copy(order)
-#       if (ext[dim] == TET_AXIS ) nord.-= 1 end
-#       _generate_nodes!(dim-1, ext, nord, ncoo, verts)
-#     else
-#       push!(verts,Tuple(ncoo))
-#     end
-#   end
-# end
+
+# Transforms the int coordinates to float coordinates
+function _interior_nodes_int_to_real_coords(nodes, order)
+  if length(nodes) > 0
+    dim = length(nodes[1])
+    cs_float = Point{dim,Float64}[]
+    cs = zeros(Float64,dim)
+    for cs_int in nodes
+      for i in 1:dim
+        cs[i] = cs_int[i]/order[i]
+      end
+      push!(cs_float,Point{dim,Float64}(cs))
+    end
+  else
+    cs_float = Point{0,Float64}[]
+  end
+  return cs_float
+end
+
+"""
+It generates the list of coordinates of all vertices in the polytope. It is
+assumed that the polytope has the bounding box [0,1]**dim
+"""
+function vertices_coordinates(p::Polytope{D}) where D
+  vs = _dimfrom_fs_dimto_fs(p, D, 0)[1]
+  vcs = Point{D,Float64}[]
+  for i in 1:length(vs)
+    cs = convert(Vector{Float64}, [p.nfaces[vs[i]].anchor...])
+    push!(vcs,cs)
+  end
+  return vcs
+end
+
+"""
+It generates the outwards normals of the facets of a polytope
+"""
+function facet_normals(p::Polytope{D}) where D
+  nf_vs = _dimfrom_fs_dimto_fs(p,D-1,0)
+  vs = vertices_coordinates(p)
+  f_ns = Point{D,Float64}[]
+  f_os = Int[]
+  for i_f in 1:length(p.nf_dim[end][end-1])
+    # @santiagobadia : we are allocating memory here but this
+    # part of the code is not a computationally intensive one
+    n, f_o = _facet_normal(p,nf_vs,vs,i_f)
+    push!(f_ns,Point{D,Float64}(n))
+    push!(f_os,f_o)
+  end
+  return f_ns, f_os
+end
+
+function _facet_normal(p::Polytope{D},nf_vs,vs,i_f) where D
+  if (length(p.extrusion) > 1)
+    v = Float64[]
+    for i = 2:length(nf_vs[i_f])
+      vi = vs[nf_vs[i_f][i]] - vs[nf_vs[i_f][1]]
+      push!(v,vi...)
+    end
+    n = nullspace(transpose(reshape(v,D,length(nf_vs[i_f])-1)))
+    # v1 = vs[nf_vs[i_f][2]] - vs[nf_vs[i_f][1]]
+    # v2 = vs[nf_vs[i_f][3]] - vs[nf_vs[i_f][1]]
+    # n = LinearAlgebra.cross([v1...],[v2...])
+    n = n.*1/sqrt(dot(n,n))
+    ext_v = _vertex_not_in_facet(p,i_f,nf_vs)
+    v3 = vs[nf_vs[i_f][1]] - vs[ext_v]
+    f_or = 1
+    if dot(v3,n) < 0.0
+      n *= -1
+      f_or = -1
+    end
+  elseif (length(p.extrusion) == 1)
+    ext_v = _vertex_not_in_facet(p,i_f,nf_vs)
+    n = vs[nf_vs[i_f][1]] - vs[ext_v]
+    n = n.*1/dot(n,n)
+    f_or = 1
+  else
+    error("O-dim polytopes do not have properly define outward facet normals")
+  end
+  return n, f_or
+end
+
+function _vertex_not_in_facet(p,i_f,nf_vs)
+  for i in p.nf_dim[end][1]
+    is_in_f = false
+    for j in nf_vs[i_f]
+      if i == j
+        is_in_f = true
+        break
+      end
+    end
+    if !is_in_f
+      return i; break
+    end
+  end
+end
 
 # @santiagobadia : The rest is waiting for a geomap
 
@@ -380,7 +499,7 @@ function nodescoordinates(order::Int; nodestype::String="Equispaced")
   if nodestype == "Chebyshev"
     nodescoordinates = [ cos((i-1)*pi/order) for i=1:ordp1]
   elseif nodestype == "Equispaced"
-    (order != 0) ? nodescoordinates = (2/order)*[ i-1 for i=1:ordp1].-1 : nodescoordinates = [0.0]
+    (order != 0) ? nodescoordinates = (1/order)*[ i-1 for i=1:ordp1] : nodescoordinates = [0.0]
   end
   return nodescoordinates
 end
