@@ -7,7 +7,7 @@ using Gridap.CLagrangianFESpaces: _setup_reffe
 using Gridap.CLagrangianFESpaces: _setup_cellbasis
 using Gridap.CLagrangianFESpaces: _S
 using Gridap.CLagrangianFESpaces: _compute_comp_to_dof
-using Gridap.CLagrangianFESpaces: _check_order
+using Gridap.CLagrangianFESpaces: _setup_grid
 using Gridap.ConformingFESpaces: _CellField
 
 export DLagrangianFESpace
@@ -23,6 +23,7 @@ import Gridap: interpolate_values
 import Gridap: interpolate_diri_values
 import Gridap: CellField
 import Gridap: CellBasis
+import Gridap: Triangulation
 
 struct DLagrangianFESpace{D,Z,T,B} <: FESpace{D,Z,T}
   grid::Grid{D,Z}
@@ -79,12 +80,7 @@ end
 function DLagrangianFESpace(
   ::Type{T},model::DiscreteModel,order,diritags,dirimasks) where T
 
-  grid = Grid(model)
-  _check_order(order,cellorders(grid))
-  facelabels = FaceLabels(model)
-  node_dim = 0
-  node_to_label = labels_on_dim(facelabels,node_dim)
-  tag_to_labels = facelabels.tag_to_labels
+  grid, node_to_label, tag_to_labels = _setup_grid(model,order)
 
   DLagrangianFESpace(
     T,grid,node_to_label,tag_to_labels,diritags,dirimasks)
@@ -172,6 +168,8 @@ function interpolate_diri_values(fesp::DLagrangianFESpace, funs::Vector{<:Functi
 end
 
 CellBasis(fesp::DLagrangianFESpace{D,Z,T}) where {D,Z,T} = fesp.cellbasis
+
+Triangulation(fesp::DLagrangianFESpace) = Triangulation(fesp.grid)
 
 # Helpers
 
