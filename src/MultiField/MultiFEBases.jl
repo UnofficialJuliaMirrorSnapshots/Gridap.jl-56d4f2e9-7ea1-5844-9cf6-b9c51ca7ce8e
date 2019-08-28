@@ -10,11 +10,14 @@ import Base: length, getindex
 import Gridap.FESpaces: FEBasis
 import Gridap: CellBasis
 import Gridap: restrict
+import Gridap: Triangulation
 
 struct FEBasisWithFieldId{B<:FEBasis}
   febasis::B
   fieldid::Int
 end
+
+Triangulation(a::FEBasisWithFieldId) = Triangulation(a.febasis)
 
 function CellBasis(
   trian::Triangulation{D,Z},
@@ -36,10 +39,10 @@ end
 
 for op in (:+, :-, :*)
   @eval begin
-    function ($op)(a::FEBasisWithFieldId,b::CellMap)
+    function ($op)(a::FEBasisWithFieldId,b::CellField)
       FEBasisWithFieldId($op(a.febasis,b),a.fieldid)
     end
-    function ($op)(a::CellMap,b::FEBasisWithFieldId)
+    function ($op)(a::CellField,b::FEBasisWithFieldId)
       FEBasisWithFieldId($op(a,b.febasis),b.fieldid)
     end
   end

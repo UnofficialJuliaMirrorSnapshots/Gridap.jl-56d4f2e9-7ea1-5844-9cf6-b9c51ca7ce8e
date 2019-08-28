@@ -10,6 +10,7 @@ import Gridap: symmetric_gradient
 import Gridap: inner
 import Base: +, -, *
 import Gridap: restrict
+import Gridap: Triangulation
 
 struct FEBasis{B<:CellBasis,T<:Triangulation}
   cellbasis::B
@@ -32,11 +33,11 @@ end
 
 for op in (:+, :-, :*)
   @eval begin
-    function ($op)(a::FEBasis,b::CellMap)
-      FEBasis($op(a.cellbasis,b),a.trian)
+    function ($op)(a::FEBasis,b::CellField)
+      FEBasis($op(a.cellbasis,cellnewaxis(b,dim=1)),a.trian)
     end
-    function ($op)(a::CellMap,b::FEBasis)
-      FEBasis($op(a,b.cellbasis),b.trian)
+    function ($op)(a::CellField,b::FEBasis)
+      FEBasis($op(cellnewaxis(a,dim=1),b.cellbasis),b.trian)
     end
   end
 end
@@ -53,6 +54,8 @@ end
 function inner(a::FEBasis,b::FEBasis)
   varinner(a.cellbasis,b.cellbasis)
 end
+
+Triangulation(a::FEBasis) = a.trian
 
 function CellBasis(
   trian::Triangulation{D,Z},
