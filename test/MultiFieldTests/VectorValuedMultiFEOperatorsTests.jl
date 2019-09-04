@@ -1,35 +1,36 @@
-module MultiFEOperatorsTests
+module VectorValuedMultiFEOperatorsTests
+
+# Testing Stokes problem with Dirichlet BCs for the velocity
+# and pressure prescribed in a single point
 
 using Test
 using Gridap
 import Gridap: ∇
 
+const T = VectorValue{2,Float64}
+
 # Define manufactured functions
-u1fun(x) = x[1] + x[2]
+u1fun(x) = VectorValue(x[1], x[2])
 u2fun(x) = x[1] - x[2]
 
-u1fun_grad(x) = VectorValue(1.0,1.0)
-u2fun_grad(x) = VectorValue(1.0,-1.0)
+u1fun_grad(x) = TensorValue(1.0,0.0,0.0,1.0)
 
 ∇(::typeof(u1fun)) = u1fun_grad
-∇(::typeof(u2fun)) = u2fun_grad
 
-b1fun(x) = u2fun(x)
-b2fun(x) = 0.0
-
-g1fun(x) = 1.0
+b1fun(x) = VectorValue(1.0,-1.0)
+b2fun(x) = 2.0
 
 # Construct the discrete model
 model = CartesianDiscreteModel(domain=(0.0,1.0,0.0,1.0), partition=(4,4))
 
-# Construct the FEspace.
-# We allow each one of the fields to have different boundary conditions
-order = 1
-diritags = [1,2,3,4,5,6,7]
-fespace1 = ConformingFESpace(Float64,model,order,diritags)
-
+# Construct the FEspace 1
+order = 2
 diritag = "boundary"
-fespace2 = ConformingFESpace(Float64,model,order,diritag)
+fespace1 = CLagrangianFESpace(T,model,order,diritag)
+
+# Construct the FEspace 2
+diritag = 1
+fespace2 = CLagrangianFESpace(Float64,model,order-1,diritag)
 
 # Define test and trial
 V1 = TestFESpace(fespace1)
@@ -44,27 +45,16 @@ U = [U1, U2]
 trian = Triangulation(model)
 quad = CellQuadrature(trian,order=2)
 
-# Setup integration on Neumann boundary
-neumanntags = [8,]
-btrian = BoundaryTriangulation(model,neumanntags)
-bquad = CellQuadrature(btrian,order=2)
-
-# Terms in the volume
-a(v,u) = inner(∇(v[1]),∇(u[1])) + inner(v[1],u[2]) + inner(∇(v[2]),∇(u[2]))
+a(v,u) = 
+  inner(∇(v[1]),∇(u[1])) - inner(div(v[1]),u[2]) + inner(v[2],div(u[1]))
 b(v) = inner(v[1],b1fun) + inner(v[2],b2fun)
-t_Ωa = LinearFETerm(a,trian,quad)
-t_Ωb = FESource(b,trian,quad)
-
-# Terms on Neumann boundary
-# Note that the Neumann BC only applies on the first field
-g(v) = inner(v[1],g1fun)
-t_Γ = FESource(g,btrian,bquad)
+t_Ω = AffineFETerm(a,b,trian,quad)
 
 # Define Assembler
 assem = SparseMatrixAssembler(V,U)
 
 # Define the FEOperator
-op = LinearFEOperator(V,U,assem,t_Ωa,t_Ωb,t_Γ)
+op = LinearFEOperator(V,U,assem,t_Ω)
 
 # Define the FESolver
 ls = LUSolver()
@@ -89,20 +79,10 @@ e1l2 = sqrt(sum( integrate(l2(e1),trian,quad) ))
 e1h1 = sqrt(sum( integrate(h1(e1),trian,quad) ))
 
 e2l2 = sqrt(sum( integrate(l2(e2),trian,quad) ))
-e2h1 = sqrt(sum( integrate(h1(e2),trian,quad) ))
 
 @test e1l2 < 1.e-8
 @test e1h1 < 1.e-8
 
 @test e2l2 < 1.e-8
-@test e2h1 < 1.e-8
 
-
-# Further tests
-
-t_Ω = AffineFETerm(a,b,trian,quad)
-op = LinearFEOperator(a,b,V,U,assem,trian,quad)
-op = LinearFEOperator(V,U,t_Ω,t_Γ)
-op = LinearFEOperator(V,U,t_Ω)
-
-end
+end # module
