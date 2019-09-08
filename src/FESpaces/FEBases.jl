@@ -36,12 +36,23 @@ end
 
 for op in (:+, :-, :*)
   @eval begin
+
     function ($op)(a::FEBasis,b::CellField)
       FEBasis($op(a.cellbasis,cellnewaxis(b,dim=1)),a.trian)
     end
+
     function ($op)(a::CellField,b::FEBasis)
       FEBasis($op(cellnewaxis(a,dim=1),b.cellbasis),b.trian)
     end
+
+    function ($op)(a::FEBasis,b::Number)
+      FEBasis($op(a.cellbasis,b),a.trian)
+    end
+
+    function ($op)(a::Number,b::FEBasis)
+      FEBasis($op(a,b.cellbasis),b.trian)
+    end
+
   end
 end
 
@@ -64,7 +75,7 @@ function CellBasis(
   trian::Triangulation{D,Z},
   fun::Function,
   b::FEBasis,
-  u::Vararg{<:CellField{Z}}) where {D,Z}
+  u...) where {D,Z}
   basis = CellBasis(trian,fun,b.cellbasis,u...)
   FEBasis(basis,trian)
 end

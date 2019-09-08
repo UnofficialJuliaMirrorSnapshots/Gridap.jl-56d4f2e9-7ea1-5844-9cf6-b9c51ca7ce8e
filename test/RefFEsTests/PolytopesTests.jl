@@ -3,6 +3,59 @@ module PolytopesTests
 ##
 using Gridap, Test
 
+##
+# Eliminating the NodeArray struct
+##
+# Checking Polytope and NFace APIs
+D = 3
+
+p = Polytope(1,1,1)
+
+nf = nfaces(p)[9]
+
+@test dim(p) == 3
+
+@test extrusion(p).array == [1,1,1]
+
+@test length(nfaces(p)) == 27
+
+@test nf_nfs(p)[end] == [i for i in 1:27]
+
+@test nf_dim(p)[end][1] == 1:8
+
+@test dim(nf) == 1
+
+@test space_dim(nf) == 3
+
+@test anchor(nf).array == [0,0,0]
+
+@test vertices_coordinates(p)[8].array == [1.0,1.0,1.0]
+
+@test num_nfaces(p,1) == 12
+
+@test extrusion(nface_ref_polytopes(p)[end]) == extrusion(p)
+
+@test generate_admissible_permutations(p)[end] == [8,7,6,4]
+
+@test length(equidistant_interior_nodes_coordinates(p,4)) == 27
+
+@test equidistant_interior_nodes_coordinates(p,[2,2,2])[1].array == [0.5, 0.5, 0.5]
+
+@test vertices_coordinates(p)[8].array == [1.0,1.0,1.0]
+
+@test facet_normals(p)[1][1].array ≈ [0.0,0.0,-1.0]
+
+## Checking anisotropic order for n-cubes
+
+D = 3
+
+p = Polytope(1,1,1)
+
+order = [2,4,3]
+
+nodes = equidistant_interior_nodes_coordinates(p, order)
+
+@test nodes[3].array ≈ [0.5,0.75,1.0/3.0]
 
 ##
 # Adding outwards normals
@@ -123,8 +176,8 @@ vcs = Gridap.Polytopes.vertices_coordinates(pl)
 ##
 D=3
 # Cube
-extrusion = (1,1,1)
-polytope = Polytope(extrusion)
+ext = (1,1,1)
+polytope = Polytope(ext)
 polytope.extrusion.array.data
 x = Vector{Float64}(undef,D)
 x .= polytope.nfaces[1].anchor.array
@@ -134,15 +187,15 @@ x .= polytope.nfaces[1].anchor.array
 @test num_nfaces(polytope,2) == 6
 @test num_nfaces(polytope,3) == 1
 # Pyramid
-extrusion = (1,1,2)
-polytope = Polytope(extrusion)
+ext = (1,1,2)
+polytope = Polytope(ext)
 @test length(polytope.nfaces) == 19
 # Prysm
-extrusion = (1,2,1)
-polytope = Polytope(extrusion)
+ext = (1,2,1)
+polytope = Polytope(ext)
 @test length(polytope.nfaces) == 21
-extrusion = Point(1,2,2)
-polytope = Polytope(extrusion)
+ext = Point(1,2,2)
+polytope = Polytope(ext)
 @test length(polytope.nfaces) == 15
 ##
 
@@ -150,35 +203,42 @@ polytope = Polytope(extrusion)
 ##
 D=3
 orders=[2,3,2]
-extrusion = Point(1,1,1)
-polytope = Polytope(extrusion)
-nodes = NodesArray(polytope,orders)
-@test length(nodes.closurenfacenodes[end-1])==12
-@test nodes.closurenfacenodes[end-1][end-1]==33
+ext = Point(1,1,1)
+polytope = Polytope(ext)
+nodes, nfacenodes = Gridap.RefFEs._high_order_lagrangian_nodes_polytope(polytope,orders)
+cv1 = Gridap.CellValuesGallery.CellValueFromArray(polytope.nf_nfs) # cell to index
+cv2 = Gridap.CellValuesGallery.CellValueFromArray(nfacenodes)
+closurenfacenodes =  Gridap.CellValuesGallery.CellVectorByComposition(cv1,cv2)
+@test length(closurenfacenodes[end-1])==12
+@test closurenfacenodes[end-1][end-1]==33
 ##
 
 # Similar test on the (open for dim > 0) nface
 ##
 D=3
 orders=[2,3,2]
-extrusion = Point(1,1,1)
-polytope = Polytope(extrusion)
-nodes = NodesArray(polytope,orders)
-@test length(nodes.nfacenodes[end-1])==2
-@test nodes.nfacenodes[end-1][end-1]==18
+ext = Point(1,1,1)
+polytope = Polytope(ext)
+nodes, nfacenodes = Gridap.RefFEs._high_order_lagrangian_nodes_polytope(polytope,orders)
+nfacenodes
+@test length(nfacenodes[end-1])==2
+@test nfacenodes[end-1][end-1]==33
 ##
 
 # Test to check the node coordinates
 ##
 D=3
 orders=[2,3,4]
-extrusion = Point(1,1,1)
-polytope = Polytope(extrusion)
-nodes = NodesArray(polytope,orders)
-@test length(nodes.coordinates)==60
-@test nodes.coordinates[33] ≈ Point(1.0, 2.0/3.0, 0.5)
-nfacenodes = nodes.closurenfacenodes[end-1]
-coords = nodes.coordinates[nfacenodes,:]
+ext = Point(1,1,1)
+polytope = Polytope(ext)
+nodes, nfacenodes = Gridap.RefFEs._high_order_lagrangian_nodes_polytope(polytope,orders)
+@test length(nodes)==60
+@test nodes[33] ≈ Point(0.5, 1.0/3.0, 0.0)
+cv1 = Gridap.CellValuesGallery.CellValueFromArray(polytope.nf_nfs) # cell to index
+cv2 = Gridap.CellValuesGallery.CellValueFromArray(nfacenodes)
+closurenfacenodes =  Gridap.CellValuesGallery.CellVectorByComposition(cv1,cv2)
+nfacenodes = closurenfacenodes[end-1]
+coords = nodes[nfacenodes,:]
 fco = i -> coords[i][1]
 @test (prod(fco(i) for i=1:length(coords))==1)
 ##
@@ -209,7 +269,7 @@ perm_p = Gridap.Polytopes.generate_admissible_permutations(p)
 # D = 3
 # p = Polytope(1,1,1)
 # anc = p.nfaces[end].anchor
-# ext = p.nfaces[end].extrusion
+# ext = p.nfaces[end].ext
 #
 # p.nfaces
 # # vertices coordinates
@@ -284,11 +344,11 @@ perm_p = Gridap.Polytopes.generate_admissible_permutations(p)
 # Test to check the views of n-face set for a given n
 ##
 # D=3
-# extrusion = Point{D,Int}(1,1,1)
-# polytope = Polytope(extrusion)
-# for j=1:length(polytope.extrusion)+1
+# ext = Point{D,Int}(1,1,1)
+# polytope = Polytope(ext)
+# for j=1:length(polytope.ext)+1
 #   for i=1:length(polytope.nfaces[polytope.dimnfs[j]])
-#     @test (sum(polytope.nfaces[polytope.dimnfs[j]][i].extrusion)==j-1)
+#     @test (sum(polytope.nfaces[polytope.dimnfs[j]][i].ext)==j-1)
 #   end
 # end
 ##

@@ -65,7 +65,7 @@ function ConformingFESpace(::Type{T},model::DiscreteModel{D},order,diri_tags) wh
   labels = FaceLabels(model)
   orders = fill(order,D)
   polytope = _polytope(celltypes(grid))
-  fe = LagrangianRefFE{D,T}(polytope, orders)
+  fe = LagrangianRefFE(T,polytope, orders)
   _diri_tags = _setup_tags(model,diri_tags)
   ConformingFESpace(fe,trian,graph,labels,_diri_tags)
 end
@@ -252,7 +252,7 @@ end
 
 function _interpolate_values(fesp::ConformingFESpace{D,Z,T},fun::Function) where {D,Z,T}
   reffe = fesp.reffe
-  dofb = reffe.dofbasis
+  dofb = dofbasis(reffe)
   trian = fesp.triangulation
   phi = CellGeomap(trian)
   uphys = fun ∘ phi

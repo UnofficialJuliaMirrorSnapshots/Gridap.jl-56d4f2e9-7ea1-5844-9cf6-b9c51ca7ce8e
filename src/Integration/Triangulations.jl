@@ -86,9 +86,9 @@ function CellField(trian::Triangulation,fun::Function)
 end
 
 function CellField(
-  trian::Triangulation{D,Z}, fun::Function, u::Vararg{<:CellField{Z}}) where {D,Z}
+  trian::Triangulation{D,Z}, fun::Function, u::CellField{Z}, v...) where {D,Z}
   phi = CellGeomap(trian)
-  cf = compose(fun,phi,u...)
+  cf = compose(fun,phi,u,v...)
   _attach_triangulation(cf,trian)
 end
 
@@ -96,7 +96,7 @@ function CellBasis(
   trian::Triangulation{D,Z},
   fun::Function,
   b::CellBasis{Z},
-  u::Vararg{<:CellField{Z}}) where {D,Z}
+  u...) where {D,Z}
   phi = CellGeomap(trian)
   _phi = _setup_cell_field(phi)
   _u = [_setup_cell_field(ui) for ui in u]
@@ -107,11 +107,13 @@ function CellBasis(
   trian::Triangulation{D,Z},
   fun::Function,
   b::CellField{Z},
-  u::Vararg{<:CellField{Z}}) where {D,Z}
+  u...) where {D,Z}
   CellField(trian,fun,b,u...)
 end
 
-_setup_cell_field(f) = cellnewaxis(f,dim=1)
+_setup_cell_field(f::CellField) = cellnewaxis(f,dim=1)
+
+_setup_cell_field(f) = f
 
 macro law(fundef)
   s = "The @law macro is only allowed in function definitions"
@@ -201,7 +203,7 @@ function _setup_basis(D,ncells)
   polytope = Polytope(code)
   order = 1
   orders = fill(order,D)
-  reffe = LagrangianRefFE{D,Float64}(polytope,orders)
+  reffe = LagrangianRefFE(Float64,polytope,orders)
   basis = shfbasis(reffe)
   b = ConstantCellMap(basis, ncells)
   r = ConstantCellValue(reffe,ncells)
@@ -285,6 +287,24 @@ for op in (:+,:-,:(gradient),:(symmetric_gradient),:(div),:(trace),:(curl))
       g = $op(a.cellfield)
       IndexCellFieldWithTriangulation(g,a.trian)
     end
+  end
+end
+
+for op in (:+, :-, :*)
+  @eval begin
+
+    function ($op)(a::IndexCellFieldWithTriangulation,b::Function)
+      trian = Triangulation(a)
+      cf = CellField(trian,b)
+      $op(a,cf)
+    end
+
+    function ($op)(a::Function,b::IndexCellFieldWithTriangulation)
+      trian = Triangulation(b)
+      cf = CellField(trian,a)
+      $op(cf,b)
+    end
+
   end
 end
 

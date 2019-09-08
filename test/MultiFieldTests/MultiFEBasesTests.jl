@@ -43,6 +43,9 @@ V = MultiFESpace([V1,V2])
 u = FEBasis(U)
 v = FEBasis(V)
 
+@test isa(u[1]+1,FEBasisWithFieldId)
+@test isa(1-u[1],FEBasisWithFieldId)
+
 @test isa(Triangulation(u[1]),Triangulation)
 
 a(v,u) = inner(∇(v[1]),∇(u[1])) + inner(v[1],u[2]) + inner(∇(v[2]),∇(u[2]))
@@ -95,5 +98,10 @@ bh = FEBasis(V)
 @test isa(ε(bh[1]),FEBasisWithFieldId)
 @test isa(div(bh[1]),FEBasisWithFieldId)
 @test isa(curl(bh[1]),FEBasisWithFieldId)
+
+σfun(x,u,i) = i*u
+ids = ones(Int,ncells(trian))
+cb = CellBasis(trian,σfun,bh[1],ids)
+@test isa(cb,FEBasisWithFieldId)
 
 end # module MultiFEBasesTests

@@ -22,15 +22,18 @@ uh = interpolate(fespace,ufun)
 @test isa(∇(bh),FEBasis)
 @test isa(bh+uh,FEBasis)
 @test isa(uh-bh,FEBasis)
+@test isa(bh-1.0,FEBasis)
+@test isa(1.0+bh,FEBasis)
 @test isa(inner(bh,bh),CellMap{Point{2},1,Float64,3})
 @test isa(inner(bh,uh),CellMap{Point{2},1,Float64,2})
 
 trian = Triangulation(model)
 quad = CellQuadrature(trian,order=2)
 
-σfun(x,u) = x[1] + u
-σ(u) = CellBasis(trian,σfun,u)
-cm = inner(bh,σ(bh))
+σfun(x,u,i) = x[1] + u
+σ(u,i) = CellBasis(trian,σfun,u,i)
+ids = ones(Int,ncells(trian))
+cm = inner(bh,σ(bh,ids))
 m = integrate(cm,trian,quad)
 _ = collect(m)
 

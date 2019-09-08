@@ -27,7 +27,7 @@ function CellBasis(
   trian::Triangulation{D,Z},
   fun::Function,
   b::FEBasisWithFieldId,
-  u::Vararg{<:CellField{Z}}) where {D,Z}
+  u...) where {D,Z}
 
   febasis = CellBasis(trian,fun,b.febasis,u...)
   FEBasisWithFieldId(febasis,b.fieldid)
@@ -43,12 +43,23 @@ end
 
 for op in (:+, :-, :*)
   @eval begin
+
     function ($op)(a::FEBasisWithFieldId,b::CellField)
       FEBasisWithFieldId($op(a.febasis,b),a.fieldid)
     end
+
     function ($op)(a::CellField,b::FEBasisWithFieldId)
       FEBasisWithFieldId($op(a,b.febasis),b.fieldid)
     end
+
+    function ($op)(a::FEBasisWithFieldId,b::Number)
+      FEBasisWithFieldId($op(a.febasis,b),a.fieldid)
+    end
+
+    function ($op)(a::Number,b::FEBasisWithFieldId)
+      FEBasisWithFieldId($op(a,b.febasis),b.fieldid)
+    end
+
   end
 end
 

@@ -56,11 +56,18 @@ _cache(v::Map{S,M,T,N}) where {S,M,T,N} = CachedArray(T,N)
 
 _cache(v::AbstractArray{T,N}) where {T,N} = CachedArray(T,N)
 
+_cache(v::Number) = fill(v,1)
+
 function _compute_S(v)
   @assert length(v) > 0
   v1, = v
   S = _stype(v1)
-  @assert S != nothing
+  if S === nothing
+    @assert length(v) > 1
+    v1,v2, = v
+    S = _stype(v2)
+    @assert S != nothing
+  end
   @assert all([ (_stype(vi)==S || _stype(vi)==nothing ) for vi in v ])
   S
 end
@@ -69,7 +76,12 @@ function _compute_M(v)
   @assert length(v) > 0
   v1, = v
   M = _m(v1)
-  @assert M != nothing
+  if M === nothing
+    @assert length(v) > 1
+    v1,v2, = v
+    M = _m(v2)
+    @assert M != nothing
+  end
   @assert all([ (_m(vi)==M || _m(vi)==nothing ) for vi in v ])
   M
 end
@@ -117,6 +129,10 @@ function _ev!(p,c,i::AbstractArray)
   for k in eachindex(i)
     @inbounds c[k] = i[k]
   end
+end
+
+function _ev!(p,c,i::Number)
+  c[1] = i
 end
 
 # TODO also with a generated function
