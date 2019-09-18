@@ -3,6 +3,7 @@ module VectorValuedFEOperatorsTests
 using Test
 using Gridap
 import Gridap: ∇
+using LinearAlgebra
 
 # Define manufactured functions
 ufun(x) = VectorValue(x[1] + x[2],x[1])
@@ -18,7 +19,7 @@ model = CartesianDiscreteModel(domain=(0.0,1.0,0.0,1.0), partition=(4,4))
 order = 2
 diritags = [1,2,3,4,5,6,7]
 T = VectorValue{2,Float64}
-fespace = ConformingFESpace(T,model,order,diritags)
+fespace = H1ConformingFESpace(T,model,order,diritags)
 
 # Define test and trial
 V = TestFESpace(fespace)
@@ -96,7 +97,7 @@ model = CartesianDiscreteModel(domain=(0.0,1.0,0.0,1.0), partition=(4,4))
 order = 2
 diritag = "boundary"
 T = VectorValue{2,Float64}
-fespace = ConformingFESpace(T,model,order,diritag)
+fespace = H1ConformingFESpace(T,model,order,diritag)
 
 # Define test and trial
 V = TestFESpace(fespace)

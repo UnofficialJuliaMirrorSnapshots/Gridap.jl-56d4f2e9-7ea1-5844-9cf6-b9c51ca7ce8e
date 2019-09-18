@@ -6,7 +6,7 @@ using Gridap
 model = CartesianDiscreteModel(domain=(0.0,1.0,0.0,1.0), partition=(4,4))
 order = 1
 diritag = "boundary"
-fespace = ConformingFESpace(Float64,model,order,diritag)
+fespace = H1ConformingFESpace(Float64,model,order,diritag)
 
 bh = FEBasis(fespace)
 
@@ -54,11 +54,22 @@ ca = integrate(cm,btrian,bquad)
 @test isa(ca,CellArray{Float64,1})
 _ = collect(ca)
 
+strian = SkeletonTriangulation(model,"interior")
+squad = CellQuadrature(strian,order=2)
+
+sbh = restrict(bh,strian)
+cm = inner(jump(sbh),mean(sbh))
+ca = integrate(cm,strian,squad)
+
+suh = restrict(uh,strian)
+cm = inner(jump(sbh*mean(suh)),mean(suh))
+ca = integrate(cm,strian,squad)
+
 model = CartesianDiscreteModel(domain=(0.0,1.0,0.0,1.0), partition=(4,4))
 order = 2
 diritag = "boundary"
 T = VectorValue{2,Float64}
-fespace = ConformingFESpace(T,model,order,diritag)
+fespace = H1ConformingFESpace(T,model,order,diritag)
 ufun(x) = VectorValue(x[2],x[1])
 uh = interpolate(fespace,ufun)
 bh = FEBasis(fespace)

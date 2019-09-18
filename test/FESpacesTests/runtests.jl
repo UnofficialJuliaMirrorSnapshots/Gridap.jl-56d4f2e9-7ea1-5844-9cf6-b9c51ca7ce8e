@@ -12,6 +12,8 @@ using Test
 
 @testset "DiscFESpaces" begin include("DiscFESpacesTests.jl") end
 
+@testset "RaviartThomasFESpacesTests" begin include("RaviartThomasFESpacesTests.jl") end
+
 @testset "ConstrainedFESpaces" begin include("ConstrainedFESpacesTests.jl") end
 
 @testset "FEFunctions" begin include("FEFunctionsTests.jl") end
@@ -23,6 +25,8 @@ using Test
 @testset "FEterms" begin include("FETermsTests.jl") end
 
 @testset "FEOperators" begin include("FEOperatorsTests.jl") end
+
+@testset "DGFEOperators" begin include("DGFEOperatorsTests.jl") end
 
 @testset "VectorValuedFEOperators" begin include("VectorValuedFEOperatorsTests.jl") end
 

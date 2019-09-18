@@ -28,7 +28,7 @@ b2field = CellField(trian,b2fun)
 
 order = 1
 diritag = "boundary"
-fespace = ConformingFESpace(Float64,model,order,diritag)
+fespace = H1ConformingFESpace(Float64,model,order,diritag)
 
 U1 = TrialFESpace(fespace,u1fun)
 
@@ -85,7 +85,7 @@ mca = integrate(mcm,trian,quad)
 T = VectorValue{2,Float64}
 order = 1
 diritag = "boundary"
-fespace = ConformingFESpace(T,model,order,diritag)
+fespace = H1ConformingFESpace(T,model,order,diritag)
 
 V1 = TestFESpace(fespace)
 V2 = V1
@@ -103,5 +103,25 @@ bh = FEBasis(V)
 ids = ones(Int,ncells(trian))
 cb = CellBasis(trian,σfun,bh[1],ids)
 @test isa(cb,FEBasisWithFieldId)
+
+strian = SkeletonTriangulation(model)
+squad = CellQuadrature(strian,order=2)
+
+sbh = restrict(bh,strian)
+@test isa(sbh[1].cellfield1,FEBasisWithFieldId)
+@test isa(sbh[1].cellfield2,FEBasisWithFieldId)
+
+cm = inner(jump(sbh[1]),jump(sbh[1]))
+ca = integrate(cm,strian,squad)
+
+@test isa(ca.cellmatrix11,MultiCellArray)
+
+uh = zero(V)
+suh = restrict(uh,strian)
+@test isa(suh[1].cellfield1,CellField)
+@test isa(suh[1].cellfield2,CellField)
+
+cm = inner(jump(sbh[1]),jump(suh[1]))
+ca = integrate(cm,strian,squad)
 
 end # module MultiFEBasesTests

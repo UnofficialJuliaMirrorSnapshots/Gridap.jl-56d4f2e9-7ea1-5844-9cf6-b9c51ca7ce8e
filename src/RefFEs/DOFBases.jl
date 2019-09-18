@@ -24,9 +24,7 @@ abstract type DOFBasis{D,T} end
 """
 Returns the dimension of the DOF basis.
 """
-function length(::DOFBasis)::Int
-  @abstractmethod
-end
+length(::DOFBasis)::Int =  @abstractmethod
 
 """
 Compute the DOF values of the given field. The results in written in place
