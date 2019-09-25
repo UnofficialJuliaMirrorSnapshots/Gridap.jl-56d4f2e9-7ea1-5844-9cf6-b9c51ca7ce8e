@@ -10,12 +10,14 @@ import Gridap: trace
 import Gridap: curl
 import Gridap: inner
 import Gridap: varinner
+import Gridap: outer
 import Base: +, -, *
 import Base: length, getindex
 import Gridap.FESpaces: FEBasis
 import Gridap: CellBasis
 import Gridap: restrict
 import Gridap: Triangulation
+import Base: iterate
 
 struct FEBasisWithFieldId{B<:FEBasis}
   febasis::B
@@ -30,9 +32,15 @@ function CellBasis(
   b::FEBasisWithFieldId,
   u...) where {D,Z}
 
-  febasis = CellBasis(trian,fun,b.febasis,u...)
+  _u = [_prepare_febasis(ui) for ui in u]
+
+  febasis = CellBasis(trian,fun,b.febasis,_u...)
   FEBasisWithFieldId(febasis,b.fieldid)
 end
+
+_prepare_febasis(ui) = ui
+
+_prepare_febasis(ui::FEBasisWithFieldId) = ui.febasis
 
 for op in (:+,:-,:(gradient),:(symmetric_gradient),:(div),:(trace),:(curl))
   @eval begin
@@ -42,7 +50,7 @@ for op in (:+,:-,:(gradient),:(symmetric_gradient),:(div),:(trace),:(curl))
   end
 end
 
-for op in (:+, :-, :*)
+for op in (:+, :-, :*, :outer)
   @eval begin
 
     function ($op)(a::FEBasisWithFieldId,b::CellField)
@@ -105,6 +113,10 @@ end
 struct MultiFEBasis
   blocks::Vector{<:FEBasisWithFieldId}
 end
+
+iterate(m::MultiFEBasis) = iterate(m.blocks)
+
+iterate(m::MultiFEBasis,state) = iterate(m.blocks,state)
 
 function FEBasis(mfes::MultiFESpace)
   blocks = [ FEBasisWithFieldId(FEBasis(v),i) for (i,v) in enumerate(mfes) ]

@@ -11,6 +11,7 @@ import Base: div
 import Gridap: trace
 import Gridap: curl
 import Gridap: inner
+import Gridap: outer
 import Gridap: varinner
 import Base: +, -, *
 import Gridap: restrict
@@ -35,7 +36,7 @@ for op in (:+,:-,:(gradient),:(symmetric_gradient),:(div),:(trace),:(curl))
   end
 end
 
-for op in (:+, :-, :*)
+for op in (:+, :-, :*, :outer)
   @eval begin
 
     function ($op)(a::FEBasis,b::CellField)
@@ -85,9 +86,14 @@ function CellBasis(
   fun::Function,
   b::FEBasis,
   u...) where {D,Z}
-  basis = CellBasis(trian,fun,b.cellbasis,u...)
+  _u = [_prepare_cellbasis(ui) for ui in u]
+  basis = CellBasis(trian,fun,b.cellbasis,_u...)
   FEBasis(basis,trian)
 end
+
+_prepare_cellbasis(ui) = ui
+
+_prepare_cellbasis(ui::FEBasis) = ui.cellbasis
 
 function restrict(feb::FEBasis,trian::BoundaryTriangulation)
   cb = restrict(feb.cellbasis,trian)
