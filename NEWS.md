@@ -5,6 +5,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+### Added
+- Pretty printing for the types most exposed to users. Since PR [#109](https://github.com/gridap/Gridap.jl/pull/109).
+### Changed
+### Removed
+### Deprecated
+### Fixed
+
+## [0.5.0] - 2019-09-27
 
 ### Added
 - Added a high level constructor, namely `FESpace`, to create different types of FE spaces. See issue [#100](https://github.com/gridap/Gridap.jl/issues/100) for more details. Since PR [#102](https://github.com/gridap/Gridap.jl/pull/102).
@@ -19,17 +27,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Now, `TrialFESpaces` can be constructed from values instead of functions if the corresponding Dirichlet conditions are constant. Since commit [bae237e](https://github.com/gridap/Gridap.jl/commit/bae237e881db6569622f3559f82bcc3999560526).
 - Added the possibility of adding new tags to a `FaceLabels` object via the function `add_tag_from_tags!` and using it to construct FE spaces. Since commit [e9dfac4](https://github.com/gridap/Gridap.jl/commit/e9dfac4489047c0b7e1c62507f4335e9fc76dfd8).
 - Added `BackslashSolver` to facilitate the usage in Gridap of the build-in Julia backslash linear solver. Since commit [8e3a9b7](https://github.com/gridap/Gridap.jl/commit/8e3a9b71c64b032c5a572a7ef696f4cbf875190b).
-- Added `JuliaNLSolver` to facilitat the usage in Gridap of the non-linear solvers available in the official Julia package `NLsolve`. Since commit [e5a933f](https://github.com/gridap/Gridap.jl/commit/e5a933f3093faea221a50bdd796d7f02113ed52c).
+- Added `NLSolver` to facilitat the usage in Gridap of the non-linear solvers available in the official Julia package `NLsolve`. Introduced in commit [e5a933f](https://github.com/gridap/Gridap.jl/commit/e5a933f3093faea221a50bdd796d7f02113ed52c) as `JuliaNLSolver`. Renamed to `NLSolver` in  PR [#108](https://github.com/gridap/Gridap.jl/pull/108).
 
 ### Changed
 - The Signature of `solve!` for `NumericalSetup` objects. The argument for the system matrix has been removed. The information about the matrix is already in the `NumericalSetup` object. Since commit  [ac212d3](https://github.com/gridap/Gridap.jl/commit/ac212d30205700a919a37f9abf9dac6cbde03e38).
 - The signature of `solve!(::FEFunction,::FESolver,::FEOperator)`. Before it was used as `cache = solve!(uh,solver,op)`, now it is used as `uh, cache = solve!(uh,solver,op)`. Since PR [#102](https://github.com/gridap/Gridap.jl/pull/102).
 - Previous ConformingFESpace constructor is H1ConformingFESpace since [34bfa34](https://github.com/gridap/Gridap.jl/commit/34bfa344efd1bc6a5d3c5993d9639259ed21671a)
 
-### Removed
 ### Deprecated
-### Fixed
+- `JuliaNLSolver`. Renamed to  `NLSolver`. Since PR [#108](https://github.com/gridap/Gridap.jl/pull/108).
+- Key-word argument `order` in `CellQuadrature` constructor.  Renamed to `degree`. Since PR [#108](https://github.com/gridap/Gridap.jl/pull/108).
 
+### Fixed
 - Bug in `@law` macro for more than one `FEBasis` arguments. Solved via PR [#104](https://github.com/gridap/Gridap.jl/pull/104).
 - Bug in `NonLinearFEOperator` constructor with default assembler in multi-field computations. Solved via PR [#104](https://github.com/gridap/Gridap.jl/pull/104).
 - Bug in `NormalVector` for non-Cartesian grids. Solved via PR [#98](https://github.com/gridap/Gridap.jl/pull/98).

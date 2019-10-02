@@ -3,6 +3,7 @@ module NormalVectorsTests
 using Test
 using Gridap
 
+
 tags = [23,24,25]
 model = CartesianDiscreteModel(partition=(3,4,2))
 
@@ -10,7 +11,12 @@ btrian = BoundaryTriangulation(model,tags)
 
 n = NormalVector(btrian)
 
-bquad = CellQuadrature(btrian,order=2)
+sr = "NormalVector object:\n length: 20"
+@test sprint(show,"text/plain",n) == sr
+
+@test string(n) == "NormalVector object"
+
+bquad = CellQuadrature(btrian,degree=2)
 q = coordinates(bquad)
 
 n_q = evaluate(n,q)
@@ -27,7 +33,7 @@ x = evaluate(bphi,q)
 #writevtk(x,"x",pointdata=["n"=>n_q])
 
 strian = SkeletonTriangulation(model,"interior")
-squad = CellQuadrature(strian,order=2)
+squad = CellQuadrature(strian,degree=2)
 qs = coordinates(squad)
 
 sphi = CellGeomap(strian)

@@ -8,7 +8,7 @@ U = TrialFESpace(fespace,ufun)
 
 # Define integration mesh and quadrature
 trian = Triangulation(model)
-quad = CellQuadrature(trian,order=order*2)
+quad = CellQuadrature(trian,degree=order*2)
 
 # Define forms
 a(v,u) = inner(∇(v), ∇(u))
@@ -20,9 +20,17 @@ assem = SparseMatrixAssembler(V,U)
 # Define the FEOperator
 op = LinearFEOperator(a,b,V,U,assem,trian,quad)
 
+sr = "LinearFEOperator object"
+@test string(op) == sr
+@test sprint(show,"text/plain",op) == sr
+
 # Define the FESolver
 ls = BackslashSolver()
 solver = LinearFESolver(ls)
+
+sr = "LinearFESolver object"
+@test string(solver) == sr
+@test sprint(show,"text/plain",solver) == sr
 
 # Solve!
 uh = solve(solver,op)
@@ -85,7 +93,7 @@ U = TrialFESpace(fespace,ufun)
 # Setup integration on Neumann boundary
 neumanntags = [8,]
 btrian = BoundaryTriangulation(model,neumanntags)
-bquad = CellQuadrature(btrian,order=order*2)
+bquad = CellQuadrature(btrian,degree=order*2)
 
 # Integrand of the Neumann BC
 g(v) = inner(v,gfun)
