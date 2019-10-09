@@ -1,82 +1,57 @@
 # Gridap
 
-[![Build Status](https://travis-ci.com/gridap/Gridap.jl.svg?branch=master)](https://travis-ci.com/gridap/Gridap.jl)
-[![Codecov](https://codecov.io/gh/gridap/Gridap.jl/branch/master/graph/badge.svg)](https://codecov.io/gh/gridap/Gridap.jl)
-[![](https://img.shields.io/badge/docs-stable-blue.svg)](https://gridap.github.io/Gridap.jl/stable)
-[![](https://img.shields.io/badge/docs-dev-blue.svg)](https://gridap.github.io/Gridap.jl/dev) [![Join the chat at https://gitter.im/Gridap-jl/community](https://badges.gitter.im/Gridap-jl/community.svg)](https://gitter.im/Gridap-jl/community?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+| **Documentation** | **Build Status** | **Community** |
+|:------------  |:------------ |:--------- |
+| [![](https://img.shields.io/badge/docs-stable-blue.svg)](https://gridap.github.io/Gridap.jl/stable) [![](https://img.shields.io/badge/docs-dev-blue.svg)](https://gridap.github.io/Gridap.jl/dev) [![Arxiv: 1910.01412](https://img.shields.io/badge/cs.MS-arXiv%3A1910.01412-B31B1B.svg)](https://arxiv.org/abs/1910.01412) | [![Build Status](https://travis-ci.com/gridap/Gridap.jl.svg?branch=master)](https://travis-ci.com/gridap/Gridap.jl) [![Codecov](https://codecov.io/gh/gridap/Gridap.jl/branch/master/graph/badge.svg)](https://codecov.io/gh/gridap/Gridap.jl) | [![Join the chat at https://gitter.im/Gridap-jl/community](https://badges.gitter.im/Gridap-jl/community.svg)](https://gitter.im/Gridap-jl/community?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge) |
 
-## Installation 
+Gridap provides a set of tools for the grid-based approximation of partial differential equations (PDEs) written in the
+[Julia programming language](https://julialang.org/). The main motivation behind the development of this library is to provide an easy-to-use framework for the development of complex PDE solvers in a dynamically typed style without sacrificing the performance of statically typed languages. The library currently supports linear and nonlinear PDE systems for scalar and vector fields, single and multi-field problems, conforming and nonconforming finite element discretizations, on structured and unstructured meshes of simplices and hexahedra.
+
+## Documentation
+
+- [**STABLE**](https://gridap.github.io/Gridap.jl/stable) &mdash; **Documentation for the most recently tagged version of Gridap.jl.**
+- [**DEVEL**](https://gridap.github.io/Gridap.jl/dev) &mdash; *Documentation for the in-development version of Gridap.*
+- [**ARTICLE**](https://arxiv.org/abs/1910.01412) &mdash; F. Verdugo, S. Badia. A user-guide to Gridap -- grid-based approximation of partial differential equations in Julia. *arXiv*. 2019. [arXiv:1910.01412](https://arxiv.org/abs/1910.01412)
+
+## Installation
+
+Gridap is a registered package in the official [Julia package registry](https://github.com/JuliaRegistries/General).  Thus, the installation of Gridap is straight forward using the [Julia's package manager](https://julialang.github.io/Pkg.jl/v1/). Open the Julia REPL, type `]` to enter package mode, and install as follows
 ```julia
-# At least julia 1.1 required
-using Pkg
-Pkg.add("Gridap")
+pkg> add Gridap
 ```
-## Quick start
 
-Solve a Poisson problem on the unit square with Dirichlet boundary conditions
+## Tutorials
 
-```julia
-using Gridap
-import Gridap: ∇
+A hands-on user-guide to the library is available as a set of [tutorials](https://github.com/gridap/Tutorials). They are available as Jupyther notebooks and html pages.
 
-# Define manufactured functions
-ufun(x) = x[1] + x[2]
-ufun_grad(x) = VectorValue(1.0,1.0)
-∇(::typeof(ufun)) = ufun_grad
-bfun(x) = 0.0
+## Plugins
 
-# Construct the discrete model
-model = CartesianDiscreteModel(domain=(0.0,1.0,0.0,1.0), partition=(4,4))
+- [GridapGmsh](https://github.com/gridap/GridapGmsh.jl) Generate a FE mesh with [GMSH](www.gmsh.info) and use it in Gridap.
+- [GridapPardiso](https://github.com/gridap/GridapPardiso.jl) Pluging to use the [Intel Pardiso MKL direct sparse solver](https://software.intel.com/en-us/mkl-developer-reference-fortran-intel-mkl-pardiso-parallel-direct-sparse-solver-interface) in Gridap.
 
-# Construct the FEspace
-order = 1
-diritag = "boundary"
-fespace = ConformingFESpace(Float64,model,order,diritag)
+## Examples
 
-# Define test and trial spaces
-V = TestFESpace(fespace)
-U = TrialFESpace(fespace,ufun)
+These are some popular PDEs solved with the Gridap library. Examples taken from the [Gridap Tutorials](https://github.com/gridap/Tutorials).
 
-# Define integration mesh and quadrature
-trian = Triangulation(model)
-quad = CellQuadrature(trian,degree=2)
+| ![](https://gridap.github.io/Tutorials/dev/assets/t001_poisson/fig_uh.png)   |  ![](https://gridap.github.io/Tutorials/dev/assets/t003_elasticity/disp_ux_40.png) | ![](https://gridap.github.io/Tutorials/dev/assets/t004_hyperelasticity/neo_hook_3d.png)  | ![](https://gridap.github.io/Tutorials/dev/assets/t0041_p_laplacian/sol-plap.png)  |
+|:-------------:|:-------------:|:-----:|:----:|
+| [Poisson equation](https://gridap.github.io/Tutorials/dev/pages/t001_poisson/) |  [Linear elasticity](https://gridap.github.io/Tutorials/dev/pages/t003_elasticity/) |  [Hyper-elasticity](https://gridap.github.io/Tutorials/dev/pages/t004_hyperelasticity/)  | [p-Laplacian](https://gridap.github.io/Tutorials/dev/pages/t0041_p_laplacian/)   |
+| ![](https://gridap.github.io/Tutorials/dev/assets/t006_poisson_dg/jump_u.png) | ![](https://gridap.github.io/Tutorials/dev/assets/t007_darcy/darcy_results.png) |![](https://gridap.github.io/Tutorials/dev/assets/t008_inc_navier_stokes/ins_solution.png) | |
+| [Poisson eq. with DG](https://gridap.github.io/Tutorials/dev/pages/t005_dg_discretization/)  |  [Darcy eq. with RT](https://gridap.github.io/Tutorials/dev/pages/t007_darcy/)  |  [Incompressible Navier-Stokes](https://gridap.github.io/Tutorials/dev/pages/t008_inc_navier_stokes/)  |  |
 
-# Define the source term
-bfield = CellField(trian,bfun)
 
-# Define forms of the problem
-a(v,u) = inner(∇(v), ∇(u))
-b(v) = inner(v,bfield)
+## How to cite Gridap
 
-# Define Assembler
-assem = SparseMatrixAssembler(V,U)
+If you have used the Gridap library in a scientific work, please cite the project as follows:
 
-# Define the FEOperator
-op = LinearFEOperator(a,b,V,U,assem,trian,quad)
-
-# Define the FESolver
-ls = LUSolver()
-solver = LinearFESolver(ls)
-
-# Solve!
-uh = solve(solver,op)
-
-# Define exact solution and error
-u = CellField(trian,ufun)
-e = u - uh
-
-# Define norms to measure the error
-l2(u) = inner(u,u)
-h1(u) = a(u,u) + l2(u)
-
-# Compute errors
-el2 = sqrt(sum( integrate(l2(e),trian,quad) ))
-eh1 = sqrt(sum( integrate(h1(e),trian,quad) ))
-
-@assert el2 < 1.e-8
-@assert eh1 < 1.e-8
-
-# Write the numerical solution, the manufactured solution, and the error
-# in a vtu file
-writevtk(trian,"results",nref=4,cellfields=["uh"=>uh,"u"=>u,"e"=>e])
+```
+@article{gridap_guide_2019,
+    author={Francesc Verdugo and Santiago Badia},
+    journal = {{arXiv}},
+    title = {{A user-guide to Gridap -- grid-based approximation of partial differential equations in Julia}},
+    year = {2019},
+    eprint={1910.01412},
+    archivePrefix={arXiv},
+    primaryClass={cs.MS},
+}
 ```
