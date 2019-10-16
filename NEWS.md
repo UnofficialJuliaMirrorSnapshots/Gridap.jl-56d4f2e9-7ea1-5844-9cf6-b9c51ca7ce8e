@@ -6,7 +6,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 ### Added
+- New `GenericRefFE`. Since commit [876ef1e](https://github.com/gridap/Gridap.jl/commit/c3c9010177432b8f07aaecf4a0baa4b93876ef1e)
+- New `NedelecRefFE` constructor that generates Nedelec FEs of arbitrary order in 2D and 3D on hex. Since commit [876ef1e](https://github.com/gridap/Gridap.jl/commit/c3c9010177432b8f07aaecf4a0baa4b93876ef1e)
+
 ### Changed
+- The `RaviartThomasRefFE` has now been replaced by `GenericRefFE`, and the constructor for Raviart-Thomas FEs is called `RTRefFE`. Since commit [876ef1e](https://github.com/gridap/Gridap.jl/commit/c3c9010177432b8f07aaecf4a0baa4b93876ef1e)
+
 ### Removed
 ### Deprecated
 ### Fixed

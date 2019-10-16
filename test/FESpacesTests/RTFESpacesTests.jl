@@ -1,4 +1,4 @@
-module RaviartThomasFESpacesTests
+module RTFESpacesTests
 ##
 using Test
 using Gridap
@@ -13,7 +13,7 @@ dom = fill(4,D)
 model = CartesianDiscreteModel(partition=tuple(dom...))
 
 p = Polytope(fill(HEX_AXIS,D)...)
-reffe = RaviartThomasRefFE(p,order)
+reffe = RTRefFE(p,Float64,order)
 
 grid = Grid(model,D)
 trian = Triangulation(grid)
@@ -33,8 +33,6 @@ trian = Triangulation(model)
 quad = CellQuadrature(trian,degree=2)
 
 uh = interpolate(dfesp,fun)
-uh.free_dofs
-uh.diri_dofs
 
 e = fun - uh
 
