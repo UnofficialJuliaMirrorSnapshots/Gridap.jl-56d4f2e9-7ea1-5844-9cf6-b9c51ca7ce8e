@@ -5,11 +5,15 @@ using Gridap.Helpers
 using Gridap.CellValuesGallery
 using Gridap.CachedArrays
 using Base: @propagate_inbounds
+using LinearAlgebra: det
+using Base: transpose
 
 using Gridap.BoundaryGrids: _setup_tags
 
 export ConformingFESpace
 export H1ConformingFESpace
+export DivConformingFESpace
+export CurlConformingFESpace
 import Gridap: num_free_dofs
 import Gridap: num_diri_dofs
 import Gridap: diri_tags
@@ -151,7 +155,7 @@ function _CellField(
   celldofs = celldofids(fespace)
   shb = CellBasis(fespace)
   cdofs = CellVectorFromLocalToGlobalPosAndNeg(
-    celldofs, free_dofs, diri_dofs)
+  celldofs, free_dofs, diri_dofs)
   lincomb(shb,cdofs)
   # @santiagobadia: For RT methods, we must add here a local_to_global_dofs
   # or global_to_local_dofs
@@ -160,7 +164,7 @@ end
 
 function _setup_conforming_fe_fields(reffe,trian,graph,labels,diri_tags,D)
   dim_to_nface_eqclass, nfree, ndiri  = _generate_dim_to_nface_to_dofs(
-    reffe, graph, labels, diri_tags)
+  reffe, graph, labels, diri_tags)
   cellvefs_dim = [connections(graph,D,i) for i in 0:D]
   offset = length.(dim_to_nface_eqclass)
   for i in 2:length(offset)
@@ -174,7 +178,7 @@ function _setup_conforming_fe_fields(reffe,trian,graph,labels,diri_tags,D)
   phi = CellGeomap(trian)
   basis = attachgeomap(shb,phi)
   return dim_to_nface_eqclass, cell_eqclass, nfree, ndiri, diri_tags,
-    reffe, trian, graph, labels, basis
+  reffe, trian, graph, labels, basis
 end
 
 function _generate_dim_to_nface_to_dofs(
@@ -209,22 +213,22 @@ function _generate_dim_to_nface_to_dofs(
     if any(lnface_to_nldofs != 0)
 
       i_free_dof, i_diri_dof = _generate_nface_to_dofs!(
-        nface_to_dofs_data,
-        nface_to_dofs_ptrs,
-        nface_to_lnface,
-        lnface_to_nldofs,
-        nface_to_label,
-        diri_tags,
-        tag_to_labels,
-        i_free_dof,
-        i_diri_dof)
+      nface_to_dofs_data,
+      nface_to_dofs_ptrs,
+      nface_to_lnface,
+      lnface_to_nldofs,
+      nface_to_label,
+      diri_tags,
+      tag_to_labels,
+      i_free_dof,
+      i_diri_dof)
 
     end
 
     length_to_ptrs!(nface_to_dofs_ptrs)
 
     nface_to_dofs = CellVectorFromDataAndPtrs(
-      nface_to_dofs_data, nface_to_dofs_ptrs)
+    nface_to_dofs_data, nface_to_dofs_ptrs)
 
     push!(dim_to_nface_to_dofs, nface_to_dofs)
 
@@ -289,7 +293,7 @@ function _interpolate_values(fesp::ConformingFESpace{D,Z,T},fun::Function) where
   diri_dofs = zeros(E, num_diri_dofs(fesp))
   aux = zeros(E, length(dofb))
   _interpolate_values_kernel!(
-    free_dofs,diri_dofs,uphys,celldofs,dofb,aux)
+  free_dofs,diri_dofs,uphys,celldofs,dofb,aux)
   return free_dofs, diri_dofs
 end
 
@@ -335,12 +339,12 @@ function _interpolate_diri_values(fesp::ConformingFESpace{D,Z,T},funs) where {D,
       nface_to_label = dim_to_nface_to_label[idim+1]
       nface_to_dofs  = dim_to_nface_to_dofs[idim+1]
       _interpolate_diri_values_kernel!(
-        diri_dof_to_val,
-        diri_dof_to_fval,
-        nface_to_label,
-        nface_to_dofs,
-        tag_f,
-        tag_to_labels)
+      diri_dof_to_val,
+      diri_dof_to_fval,
+      nface_to_label,
+      nface_to_dofs,
+      tag_f,
+      tag_to_labels)
     end
   end
 
@@ -418,6 +422,87 @@ size(self::CellEqClass) = (length(self.cell_to_nfaces),)
     end
   end
   self.cv
+end
+
+function DivConformingFESpace(
+  reffe::RefFE{D,T},
+  trian::Triangulation{D,Z},
+  graph::GridGraph,
+  labels::FaceLabels,
+  diri_tags::Vector{Int}) where {D,Z,T}
+
+  dim_to_nface_eqclass,
+  cell_eqclass,
+  nfree,
+  ndiri, diri_tags,
+  reffe,
+  trian,
+  graph,
+  labels,
+  basis = _setup_conforming_fe_fields(reffe,trian,graph,labels,diri_tags,D)
+
+  phi = CellGeomap(trian)
+  jac = gradient(phi)
+  detjac = det(jac)
+
+  piola_map = (1.0/detjac)*jac
+
+  # physbasis = _attachpiola(basis,piola_map)
+  physbasis = basis
+
+  ConformingFESpace{D,Z,T}( dim_to_nface_eqclass,
+  cell_eqclass,
+  nfree,
+  ndiri, diri_tags,
+  reffe,
+  trian,
+  graph,
+  labels,
+  physbasis )
+end
+
+function CurlConformingFESpace(
+  reffe::RefFE{D,T},
+  trian::Triangulation{D,Z},
+  graph::GridGraph,
+  labels::FaceLabels,
+  diri_tags::Vector{Int}) where {D,Z,T}
+
+  dim_to_nface_eqclass,
+  cell_eqclass,
+  nfree,
+  ndiri, diri_tags,
+  reffe,
+  trian,
+  graph,
+  labels,
+  basis = _setup_conforming_fe_fields(reffe,trian,graph,labels,diri_tags,D)
+
+  phi = CellGeomap(trian)
+  jac = gradient(phi)
+  jact = transpose(jac)
+
+  piola_map = inv(jact)
+
+  # physbasis = _attachpiola(basis,piola_map)
+  physbasis = piola_map
+
+  ConformingFESpace{D,Z,T}( dim_to_nface_eqclass,
+  cell_eqclass,
+  nfree,
+  ndiri, diri_tags,
+  reffe,
+  trian,
+  graph,
+  labels,
+  physbasis )
+end
+
+# @santiagobadia : It is not ready because I think that the product of a
+# integration point values times a
+function _attachpiola(a::CellBasis{D},piola::CellFieldLike) where D
+  Gridap.CellFieldsOperations._merge_val_and_grad(piola*a.val,piola*a.grad)
+  # Gridap.CellFieldsOperations._merge_val_and_grad(a,gradient(a))
 end
 
 end # module

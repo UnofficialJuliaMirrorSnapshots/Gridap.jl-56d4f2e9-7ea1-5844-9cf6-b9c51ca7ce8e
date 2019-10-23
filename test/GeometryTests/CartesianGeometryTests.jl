@@ -63,6 +63,15 @@ test_grid(grid3,np,nc)
 
 @test isa(grid3,CartesianGrid{3})
 
+model = CartesianDiscreteModel(
+  partition=(3,4,2),
+  map = (x -> 5*x))
+
+grid4 = Grid(model)
+x = points(grid4)
+D = 2
+@test isa(x,CellValue{Point{3,Float64}})
+
 gridgraph = FullGridGraph(model)
 
 @test isa(gridgraph, FullGridGraph)
